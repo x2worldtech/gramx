@@ -1,0 +1,288 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Sora";
+  src: url("/assets/fonts/Sora[wght].woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+@layer base {
+  /* Prevent iOS zoom on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  :root {
+    --radius: 1rem;
+
+    /* Telegram-inspired iOS palette - light blue / white / dark */
+    --background: 0.97 0.005 240;
+    --foreground: 0.12 0.01 250;
+
+    --card: 1 0 0;
+    --card-foreground: 0.12 0.01 250;
+
+    --popover: 1 0 0;
+    --popover-foreground: 0.12 0.01 250;
+
+    /* Telegram blue #0088cc -> OKLCH approx */
+    --primary: 0.57 0.18 233;
+    --primary-foreground: 1 0 0;
+
+    --secondary: 0.94 0.01 240;
+    --secondary-foreground: 0.3 0.02 240;
+
+    --muted: 0.93 0.008 240;
+    --muted-foreground: 0.52 0.01 250;
+
+    --accent: 0.94 0.04 230;
+    --accent-foreground: 0.57 0.18 233;
+
+    --destructive: 0.62 0.22 25;
+    --destructive-foreground: 1 0 0;
+
+    --border: 0.88 0.01 240;
+    --input: 0.93 0.01 240;
+    --ring: 0.57 0.18 233;
+
+    /* Chat bubble colors */
+    --bubble-out: 0.57 0.18 233;
+    --bubble-out-fg: 1 0 0;
+    --bubble-in: 1 0 0;
+    --bubble-in-fg: 0.12 0.01 250;
+
+    /* Nav bar */
+    --navbar: 0.98 0.003 240;
+    --navbar-border: 0.88 0.01 240;
+
+    --chart-1: 0.646 0.222 41.116;
+    --chart-2: 0.6 0.118 184.704;
+    --chart-3: 0.57 0.18 233;
+    --chart-4: 0.828 0.189 84.429;
+    --chart-5: 0.769 0.188 70.08;
+
+    --sidebar: 0.98 0.003 240;
+    --sidebar-foreground: 0.12 0.01 250;
+    --sidebar-primary: 0.57 0.18 233;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.94 0.01 240;
+    --sidebar-accent-foreground: 0.12 0.01 250;
+    --sidebar-border: 0.88 0.01 240;
+    --sidebar-ring: 0.57 0.18 233;
+  }
+
+  .dark {
+    --background: 0.13 0.015 250;
+    --foreground: 0.94 0.005 240;
+
+    --card: 0.18 0.015 245;
+    --card-foreground: 0.94 0.005 240;
+
+    --popover: 0.18 0.015 245;
+    --popover-foreground: 0.94 0.005 240;
+
+    --primary: 0.62 0.18 233;
+    --primary-foreground: 1 0 0;
+
+    --secondary: 0.22 0.015 245;
+    --secondary-foreground: 0.85 0.01 240;
+
+    --muted: 0.22 0.012 245;
+    --muted-foreground: 0.58 0.01 250;
+
+    --accent: 0.24 0.03 240;
+    --accent-foreground: 0.62 0.18 233;
+
+    --destructive: 0.62 0.22 25;
+    --destructive-foreground: 1 0 0;
+
+    --border: 0.28 0.015 245;
+    --input: 0.22 0.015 245;
+    --ring: 0.62 0.18 233;
+
+    --bubble-out: 0.57 0.18 233;
+    --bubble-out-fg: 1 0 0;
+    --bubble-in: 0.22 0.015 245;
+    --bubble-in-fg: 0.94 0.005 240;
+
+    --navbar: 0.16 0.015 248;
+    --navbar-border: 0.28 0.015 245;
+
+    --sidebar: 0.16 0.015 248;
+    --sidebar-foreground: 0.94 0.005 240;
+    --sidebar-primary: 0.62 0.18 233;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.22 0.015 245;
+    --sidebar-accent-foreground: 0.94 0.005 240;
+    --sidebar-border: 0.28 0.015 245;
+    --sidebar-ring: 0.62 0.18 233;
+  }
+
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Sora", system-ui, -apple-system, sans-serif;
+    height: 100%;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: oklch(0.88 0.025 235);
+  }
+}
+
+@layer utilities {
+  .app-shell {
+    width: 100%;
+    max-width: 430px;
+    height: 100%;
+    max-height: 100dvh;
+    background: oklch(var(--background));
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0, 100, 200, 0.15);
+  }
+
+  @media (min-width: 640px) {
+    .app-shell {
+      border-radius: 24px;
+      max-height: min(900px, 100dvh);
+      box-shadow: 0 8px 64px rgba(0, 80, 180, 0.18), 0 2px 8px rgba(0,0,0,0.1);
+      border: 1px solid oklch(0.88 0.01 240);
+    }
+  }
+
+  .ios-navbar {
+    background: oklch(var(--navbar) / 0.92);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border-bottom: 0.5px solid oklch(var(--navbar-border));
+  }
+
+  .ios-bottom-bar {
+    background: oklch(var(--navbar) / 0.92);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border-top: 0.5px solid oklch(var(--navbar-border));
+  }
+
+  .bubble-out {
+    background: oklch(var(--bubble-out));
+    color: oklch(var(--bubble-out-fg));
+    border-radius: 18px 18px 4px 18px;
+  }
+
+  .bubble-in {
+    background: oklch(var(--bubble-in));
+    color: oklch(var(--bubble-in-fg));
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  .chat-bg {
+    background-color: oklch(0.95 0.01 235);
+    background-image: radial-gradient(circle at 20% 80%, oklch(0.92 0.04 235 / 0.4) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, oklch(0.94 0.03 230 / 0.3) 0%, transparent 50%);
+  }
+
+  /* Dynamic chat background variants */
+  .chat-bg-0 {
+    background-color: oklch(0.95 0.01 235);
+    background-image: radial-gradient(circle at 20% 80%, oklch(0.92 0.04 235 / 0.4) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, oklch(0.94 0.03 230 / 0.3) 0%, transparent 50%);
+  }
+
+  .chat-bg-1 {
+    background-color: oklch(0.14 0.025 245);
+    background-image: radial-gradient(circle at 30% 70%, oklch(0.18 0.04 240 / 0.5) 0%, transparent 50%);
+  }
+
+  .chat-bg-2 {
+    background-image: linear-gradient(160deg, oklch(0.32 0.18 255) 0%, oklch(0.55 0.2 200) 50%, oklch(0.7 0.15 190) 100%);
+  }
+
+  .chat-bg-3 {
+    background-image: linear-gradient(160deg, oklch(0.25 0.18 295) 0%, oklch(0.45 0.2 310) 50%, oklch(0.7 0.18 350) 100%);
+  }
+
+  .chat-bg-4 {
+    background-color: oklch(0.97 0.005 240);
+    background-image: radial-gradient(circle, oklch(0.7 0.05 235 / 0.25) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  .avatar-gradient-1 { background: linear-gradient(135deg, oklch(0.62 0.2 230), oklch(0.52 0.22 250)); }
+  .avatar-gradient-2 { background: linear-gradient(135deg, oklch(0.65 0.18 160), oklch(0.55 0.2 180)); }
+  .avatar-gradient-3 { background: linear-gradient(135deg, oklch(0.68 0.2 45), oklch(0.58 0.22 25)); }
+  .avatar-gradient-4 { background: linear-gradient(135deg, oklch(0.65 0.2 300), oklch(0.55 0.22 320)); }
+  .avatar-gradient-5 { background: linear-gradient(135deg, oklch(0.62 0.2 140), oklch(0.52 0.22 120)); }
+  .avatar-gradient-6 { background: linear-gradient(135deg, oklch(0.68 0.22 30), oklch(0.58 0.2 10)); }
+
+  .msg-time {
+    font-size: 11px;
+    opacity: 0.65;
+    letter-spacing: 0.01em;
+  }
+
+  .input-field {
+    background: oklch(var(--input));
+    border: 1.5px solid oklch(var(--border));
+    border-radius: 12px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .input-field:focus-within {
+    border-color: oklch(var(--primary));
+    box-shadow: 0 0 0 3px oklch(var(--primary) / 0.15);
+  }
+
+  .page-slide-in {
+    animation: pageSlideIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @keyframes pageSlideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Smooth scrolling for chat */
+  .chat-messages {
+    scroll-behavior: smooth;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Safe area */
+  .safe-top { padding-top: env(safe-area-inset-top, 12px); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }
+}
