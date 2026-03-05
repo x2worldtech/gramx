@@ -45,6 +45,10 @@ function AppInner() {
     clear();
   };
 
+  const handleLogout = () => {
+    clear();
+  };
+
   // Only block during the initial local-storage read (< 300ms)
   if (isInitializing) {
     return (
@@ -132,6 +136,7 @@ function AppInner() {
           myUser={myUser ?? null}
           onBack={closeSettings}
           onAccountDeleted={handleAccountDeleted}
+          onLogout={handleLogout}
         />
       </div>
     </div>
@@ -149,12 +154,39 @@ export default function App() {
 function SplashLogo() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-background">
-      <div className="w-20 h-20 rounded-[22px] overflow-hidden shadow-ios">
-        <img
-          src="/assets/generated/gramx-logo-transparent.dim_200x200.png"
-          alt="GramX Logo"
-          className="w-full h-full object-cover"
-        />
+      <div className="relative w-10 h-10">
+        <svg
+          className="w-10 h-10 animate-spin"
+          viewBox="0 0 40 40"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="Loading"
+        >
+          <circle cx="20" cy="20" r="16" stroke="#1e293b" strokeWidth="3.5" />
+          <circle
+            cx="20"
+            cy="20"
+            r="16"
+            stroke="url(#spinner-gradient)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeDasharray="60 41"
+          />
+          <defs>
+            <linearGradient
+              id="spinner-gradient"
+              x1="0"
+              y1="0"
+              x2="40"
+              y2="40"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0.6" />
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
     </div>
   );

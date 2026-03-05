@@ -18,7 +18,7 @@ import {
   Settings,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Chat, User } from "../backend.d";
 import { ChatType } from "../backend.d";
 import { useAvatarImages } from "../hooks/useAvatarImages";
@@ -60,6 +60,7 @@ export default function ChatListScreen({
     "chats",
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -277,6 +278,7 @@ export default function ChatListScreen({
         <div className="flex items-center gap-2 bg-muted rounded-[10px] px-3 h-9">
           <Search size={15} className="text-muted-foreground flex-shrink-0" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder={t("chatlist_search_placeholder")}
             value={searchQuery}
@@ -537,7 +539,11 @@ export default function ChatListScreen({
             <button
               type="button"
               data-ocid="chat_list.tab"
-              onClick={() => setActiveTab("contacts")}
+              onClick={() => {
+                setActiveTab("contacts");
+                setScreen("main");
+                setTimeout(() => searchInputRef.current?.focus(), 50);
+              }}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
                 activeTab === "contacts"
                   ? "text-primary"

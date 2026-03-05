@@ -124,6 +124,18 @@
   * {
     @apply border-border;
     -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection only inside input fields */
+  input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
   }
 
   html {
@@ -232,6 +244,81 @@
     background-size: 16px 16px;
   }
 
+  /* Midnight -- deep navy, ultra dark */
+  .chat-bg-5 {
+    background-color: oklch(0.10 0.03 255);
+    background-image:
+      radial-gradient(ellipse at 10% 90%, oklch(0.18 0.08 260 / 0.5) 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 10%, oklch(0.15 0.06 250 / 0.4) 0%, transparent 50%);
+  }
+
+  /* Aurora -- northern lights, green-teal-violet */
+  .chat-bg-6 {
+    background-color: oklch(0.10 0.02 250);
+    background-image:
+      linear-gradient(170deg, oklch(0.22 0.14 285 / 0.9) 0%, oklch(0.30 0.18 175 / 0.8) 45%, oklch(0.20 0.12 210 / 0.7) 100%);
+  }
+
+  /* Sand -- warm beige, minimal */
+  .chat-bg-7 {
+    background-color: oklch(0.93 0.025 75);
+    background-image:
+      radial-gradient(ellipse at 30% 70%, oklch(0.88 0.04 70 / 0.5) 0%, transparent 60%),
+      radial-gradient(ellipse at 75% 25%, oklch(0.90 0.03 60 / 0.4) 0%, transparent 50%);
+  }
+
+  /* Forest -- deep green, earthy */
+  .chat-bg-8 {
+    background-color: oklch(0.22 0.07 150);
+    background-image:
+      radial-gradient(ellipse at 20% 80%, oklch(0.30 0.12 145 / 0.6) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 20%, oklch(0.18 0.06 160 / 0.5) 0%, transparent 50%);
+  }
+
+  /* Ember -- warm orange-red sunset */
+  .chat-bg-9 {
+    background-image: linear-gradient(160deg, oklch(0.20 0.10 30) 0%, oklch(0.45 0.22 35) 40%, oklch(0.65 0.20 55) 100%);
+  }
+
+  /* Ice -- pale blue-white, clean minimal */
+  .chat-bg-10 {
+    background-color: oklch(0.96 0.012 215);
+    background-image:
+      radial-gradient(ellipse at 20% 30%, oklch(0.92 0.03 210 / 0.6) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 80%, oklch(0.94 0.02 220 / 0.5) 0%, transparent 50%);
+  }
+
+  /* Nebula -- deep space purple-pink-blue */
+  .chat-bg-11 {
+    background-color: oklch(0.08 0.02 285);
+    background-image:
+      radial-gradient(ellipse at 15% 40%, oklch(0.35 0.22 300 / 0.7) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 60%, oklch(0.28 0.18 260 / 0.6) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 20%, oklch(0.20 0.14 340 / 0.5) 0%, transparent 45%);
+  }
+
+  /* Slate -- clean neutral gray, minimal */
+  .chat-bg-12 {
+    background-color: oklch(0.88 0.006 250);
+    background-image:
+      radial-gradient(ellipse at 25% 75%, oklch(0.84 0.01 245 / 0.5) 0%, transparent 55%);
+  }
+
+  /* Rose -- soft blush pink */
+  .chat-bg-13 {
+    background-color: oklch(0.92 0.025 10);
+    background-image:
+      radial-gradient(ellipse at 30% 60%, oklch(0.87 0.05 5 / 0.5) 0%, transparent 55%),
+      radial-gradient(ellipse at 75% 30%, oklch(0.90 0.03 350 / 0.4) 0%, transparent 50%);
+  }
+
+  /* Void -- pure black with subtle shimmer */
+  .chat-bg-14 {
+    background-color: oklch(0.06 0.01 250);
+    background-image:
+      radial-gradient(ellipse at 50% 50%, oklch(0.12 0.04 245 / 0.4) 0%, transparent 70%);
+  }
+
   .avatar-gradient-1 { background: linear-gradient(135deg, oklch(0.62 0.2 230), oklch(0.52 0.22 250)); }
   .avatar-gradient-2 { background: linear-gradient(135deg, oklch(0.65 0.18 160), oklch(0.55 0.2 180)); }
   .avatar-gradient-3 { background: linear-gradient(135deg, oklch(0.68 0.2 45), oklch(0.58 0.22 25)); }
@@ -285,4 +372,61 @@
   /* Safe area */
   .safe-top { padding-top: env(safe-area-inset-top, 12px); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }
+
+  /* ── Auth screen animated background ── */
+  @keyframes auth-drift1 {
+    0%   { transform: translate(0%, 0%) scale(1); }
+    33%  { transform: translate(8%, -12%) scale(1.08); }
+    66%  { transform: translate(-6%, 8%) scale(0.95); }
+    100% { transform: translate(0%, 0%) scale(1); }
+  }
+
+  @keyframes auth-drift2 {
+    0%   { transform: translate(0%, 0%) scale(1.05); }
+    40%  { transform: translate(-10%, 14%) scale(0.92); }
+    70%  { transform: translate(12%, -6%) scale(1.1); }
+    100% { transform: translate(0%, 0%) scale(1.05); }
+  }
+
+  @keyframes auth-drift3 {
+    0%   { transform: translate(0%, 0%) rotate(0deg); }
+    50%  { transform: translate(6%, 10%) rotate(180deg); }
+    100% { transform: translate(0%, 0%) rotate(360deg); }
+  }
+
+  @keyframes auth-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%       { opacity: 0.85; }
+  }
+
+  @keyframes auth-shimmer {
+    0%   { background-position: 200% 50%; }
+    100% { background-position: -200% 50%; }
+  }
+
+  @keyframes auth-float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-10px); }
+  }
+
+  .auth-orb-1 {
+    animation: auth-drift1 18s ease-in-out infinite;
+  }
+
+  .auth-orb-2 {
+    animation: auth-drift2 14s ease-in-out infinite;
+  }
+
+  .auth-orb-3 {
+    animation: auth-drift3 22s linear infinite;
+    animation-direction: alternate;
+  }
+
+  .auth-pulse {
+    animation: auth-pulse 6s ease-in-out infinite;
+  }
+
+  .auth-float {
+    animation: auth-float 5s ease-in-out infinite;
+  }
 }

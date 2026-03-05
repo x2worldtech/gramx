@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Globe,
   Loader2,
+  LogOut,
   Moon,
   Palette,
   Sun,
@@ -40,6 +41,7 @@ interface SettingsScreenProps {
   myUser: UserType | null;
   onBack: () => void;
   onAccountDeleted: () => void;
+  onLogout: () => void;
 }
 
 type SettingsView = "overview" | "profile" | "appearance" | "language";
@@ -69,6 +71,7 @@ export default function SettingsScreen({
   myUser,
   onBack,
   onAccountDeleted,
+  onLogout,
 }: SettingsScreenProps) {
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
@@ -185,31 +188,143 @@ export default function SettingsScreen({
     LANGUAGES.find((l) => l.code === language) ?? LANGUAGES[0];
 
   // Chat background labels mapped from translation keys
-  const CHAT_BACKGROUNDS = [
+  const CHAT_BACKGROUNDS: {
+    labelKey: Parameters<typeof t>[0];
+    className: string;
+    previewStyle: React.CSSProperties;
+  }[] = [
     {
-      labelKey: "settings_bg_standard" as const,
+      labelKey: "settings_bg_standard",
       className: "chat-bg-0",
-      preview: "bg-sky-100",
+      previewStyle: {
+        backgroundColor: "oklch(0.95 0.01 235)",
+        backgroundImage:
+          "radial-gradient(circle at 20% 80%, oklch(0.92 0.04 235 / 0.4) 0%, transparent 50%), radial-gradient(circle at 80% 20%, oklch(0.94 0.03 230 / 0.3) 0%, transparent 50%)",
+      },
     },
     {
-      labelKey: "settings_bg_dark" as const,
+      labelKey: "settings_bg_dark",
       className: "chat-bg-1",
-      preview: "bg-slate-900",
+      previewStyle: {
+        backgroundColor: "oklch(0.14 0.025 245)",
+        backgroundImage:
+          "radial-gradient(circle at 30% 70%, oklch(0.18 0.04 240 / 0.5) 0%, transparent 50%)",
+      },
     },
     {
-      labelKey: "settings_bg_ocean" as const,
+      labelKey: "settings_bg_ocean",
       className: "chat-bg-2",
-      preview: "bg-gradient-to-br from-blue-700 to-cyan-400",
+      previewStyle: {
+        backgroundImage:
+          "linear-gradient(160deg, oklch(0.32 0.18 255) 0%, oklch(0.55 0.2 200) 50%, oklch(0.7 0.15 190) 100%)",
+      },
     },
     {
-      labelKey: "settings_bg_purple" as const,
+      labelKey: "settings_bg_purple",
       className: "chat-bg-3",
-      preview: "bg-gradient-to-br from-purple-800 to-pink-400",
+      previewStyle: {
+        backgroundImage:
+          "linear-gradient(160deg, oklch(0.25 0.18 295) 0%, oklch(0.45 0.2 310) 50%, oklch(0.7 0.18 350) 100%)",
+      },
     },
     {
-      labelKey: "settings_bg_pattern" as const,
+      labelKey: "settings_bg_pattern",
       className: "chat-bg-4",
-      preview: "bg-slate-100",
+      previewStyle: {
+        backgroundColor: "oklch(0.97 0.005 240)",
+        backgroundImage:
+          "radial-gradient(circle, oklch(0.7 0.05 235 / 0.25) 1px, transparent 1px)",
+        backgroundSize: "12px 12px",
+      },
+    },
+    {
+      labelKey: "settings_bg_midnight",
+      className: "chat-bg-5",
+      previewStyle: {
+        backgroundColor: "oklch(0.10 0.03 255)",
+        backgroundImage:
+          "radial-gradient(ellipse at 10% 90%, oklch(0.18 0.08 260 / 0.5) 0%, transparent 55%), radial-gradient(ellipse at 90% 10%, oklch(0.15 0.06 250 / 0.4) 0%, transparent 50%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_aurora",
+      className: "chat-bg-6",
+      previewStyle: {
+        backgroundColor: "oklch(0.10 0.02 250)",
+        backgroundImage:
+          "linear-gradient(170deg, oklch(0.22 0.14 285 / 0.9) 0%, oklch(0.30 0.18 175 / 0.8) 45%, oklch(0.20 0.12 210 / 0.7) 100%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_sand",
+      className: "chat-bg-7",
+      previewStyle: {
+        backgroundColor: "oklch(0.93 0.025 75)",
+        backgroundImage:
+          "radial-gradient(ellipse at 30% 70%, oklch(0.88 0.04 70 / 0.5) 0%, transparent 60%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_forest",
+      className: "chat-bg-8",
+      previewStyle: {
+        backgroundColor: "oklch(0.22 0.07 150)",
+        backgroundImage:
+          "radial-gradient(ellipse at 20% 80%, oklch(0.30 0.12 145 / 0.6) 0%, transparent 55%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_ember",
+      className: "chat-bg-9",
+      previewStyle: {
+        backgroundImage:
+          "linear-gradient(160deg, oklch(0.20 0.10 30) 0%, oklch(0.45 0.22 35) 40%, oklch(0.65 0.20 55) 100%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_ice",
+      className: "chat-bg-10",
+      previewStyle: {
+        backgroundColor: "oklch(0.96 0.012 215)",
+        backgroundImage:
+          "radial-gradient(ellipse at 20% 30%, oklch(0.92 0.03 210 / 0.6) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, oklch(0.94 0.02 220 / 0.5) 0%, transparent 50%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_nebula",
+      className: "chat-bg-11",
+      previewStyle: {
+        backgroundColor: "oklch(0.08 0.02 285)",
+        backgroundImage:
+          "radial-gradient(ellipse at 15% 40%, oklch(0.35 0.22 300 / 0.7) 0%, transparent 50%), radial-gradient(ellipse at 85% 60%, oklch(0.28 0.18 260 / 0.6) 0%, transparent 50%), radial-gradient(ellipse at 50% 20%, oklch(0.20 0.14 340 / 0.5) 0%, transparent 45%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_slate",
+      className: "chat-bg-12",
+      previewStyle: {
+        backgroundColor: "oklch(0.88 0.006 250)",
+        backgroundImage:
+          "radial-gradient(ellipse at 25% 75%, oklch(0.84 0.01 245 / 0.5) 0%, transparent 55%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_rose",
+      className: "chat-bg-13",
+      previewStyle: {
+        backgroundColor: "oklch(0.92 0.025 10)",
+        backgroundImage:
+          "radial-gradient(ellipse at 30% 60%, oklch(0.87 0.05 5 / 0.5) 0%, transparent 55%), radial-gradient(ellipse at 75% 30%, oklch(0.90 0.03 350 / 0.4) 0%, transparent 50%)",
+      },
+    },
+    {
+      labelKey: "settings_bg_void",
+      className: "chat-bg-14",
+      previewStyle: {
+        backgroundColor: "oklch(0.06 0.01 250)",
+        backgroundImage:
+          "radial-gradient(ellipse at 50% 50%, oklch(0.12 0.04 245 / 0.4) 0%, transparent 70%)",
+      },
     },
   ];
 
@@ -264,9 +379,6 @@ export default function SettingsScreen({
                 {t("settings_back")}
               </span>
             </button>
-            <h1 className="flex-1 text-center text-lg font-semibold text-foreground tracking-tight pr-10">
-              {t("settings_title")}
-            </h1>
           </div>
         </div>
 
@@ -381,6 +493,43 @@ export default function SettingsScreen({
             </button>
           </div>
 
+          {/* Logout button */}
+          <div className="mx-4 mb-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  data-ocid="settings.logout_button"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl border border-border/60 bg-card text-foreground text-sm font-medium active:opacity-70 transition-opacity"
+                >
+                  <LogOut size={16} strokeWidth={2} />
+                  {t("settings_logout")}
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent data-ocid="settings.logout_dialog">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {t("settings_logout_confirm_title")}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("settings_logout_confirm_desc")}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-ocid="settings.logout_cancel_button">
+                    {t("settings_logout_cancel")}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    data-ocid="settings.logout_confirm_button"
+                    onClick={onLogout}
+                  >
+                    {t("settings_logout_confirm")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
           {/* Delete account button */}
           <div className="mx-4 mb-6">
             <AlertDialog>
@@ -448,9 +597,6 @@ export default function SettingsScreen({
                 {t("settings_title")}
               </span>
             </button>
-            <h1 className="flex-1 text-center text-lg font-semibold text-foreground tracking-tight pr-16">
-              {t("settings_profile_title")}
-            </h1>
           </div>
         </div>
 
@@ -646,9 +792,6 @@ export default function SettingsScreen({
                 {t("settings_title")}
               </span>
             </button>
-            <h1 className="flex-1 text-center text-lg font-semibold text-foreground tracking-tight pr-20">
-              {t("settings_language_title")}
-            </h1>
           </div>
         </div>
 
@@ -707,9 +850,6 @@ export default function SettingsScreen({
                 {t("settings_title")}
               </span>
             </button>
-            <h1 className="flex-1 text-center text-lg font-semibold text-foreground tracking-tight pr-20">
-              {t("settings_appearance_title")}
-            </h1>
           </div>
         </div>
 
@@ -759,26 +899,7 @@ export default function SettingsScreen({
                     }`}
                   >
                     {/* Background preview */}
-                    <div className={`absolute inset-0 ${bg.preview}`} />
-                    {idx === 0 && (
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          backgroundImage:
-                            "radial-gradient(circle at 20% 80%, oklch(0.92 0.04 235 / 0.5) 0%, transparent 50%), radial-gradient(circle at 80% 20%, oklch(0.94 0.03 230 / 0.4) 0%, transparent 50%)",
-                        }}
-                      />
-                    )}
-                    {idx === 4 && (
-                      <div
-                        className="absolute inset-0"
-                        style={{
-                          backgroundImage:
-                            "radial-gradient(circle, oklch(0.7 0.05 235 / 0.3) 1px, transparent 1px)",
-                          backgroundSize: "12px 12px",
-                        }}
-                      />
-                    )}
+                    <div className="absolute inset-0" style={bg.previewStyle} />
                     {/* Mini chat bubbles */}
                     <div className="absolute inset-0 p-2 flex flex-col justify-end gap-1">
                       <div className="self-end w-8 h-2 rounded-full bg-white/70" />

@@ -101,25 +101,6 @@ export default function RegistrationScreen() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
       >
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-20 h-20 rounded-[22px] overflow-hidden shadow-ios">
-            <img
-              src="/assets/generated/gramx-logo-transparent.dim_200x200.png"
-              alt="GramX Logo"
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              GramX
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("reg_create_profile")}
-            </p>
-          </div>
-        </div>
-
         {/* Registration form */}
         <form onSubmit={handleRegister} className="w-full flex flex-col gap-5">
           <div className="text-center">

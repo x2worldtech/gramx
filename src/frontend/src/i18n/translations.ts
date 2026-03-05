@@ -74,6 +74,11 @@ const en = {
   settings_my_profile: "My Profile",
   settings_appearance: "Appearance",
   settings_language: "Language",
+  settings_logout: "Log Out",
+  settings_logout_confirm_title: "Log out?",
+  settings_logout_confirm_desc: "You will be signed out of your account.",
+  settings_logout_cancel: "Cancel",
+  settings_logout_confirm: "Log Out",
   settings_delete_account: "Delete Account",
   settings_delete_confirm_title: "Really delete account?",
   settings_delete_confirm_desc:
@@ -112,6 +117,16 @@ const en = {
   settings_bg_ocean: "Ocean",
   settings_bg_purple: "Purple",
   settings_bg_pattern: "Pattern",
+  settings_bg_midnight: "Midnight",
+  settings_bg_aurora: "Aurora",
+  settings_bg_sand: "Sand",
+  settings_bg_forest: "Forest",
+  settings_bg_ember: "Ember",
+  settings_bg_ice: "Ice",
+  settings_bg_nebula: "Nebula",
+  settings_bg_slate: "Slate",
+  settings_bg_rose: "Rose",
+  settings_bg_void: "Void",
 
   // Settings - Language
   settings_language_title: "Language",
@@ -126,6 +141,22 @@ const en = {
   chatlist_delete_confirm_title: "Delete Chats?",
   chatlist_delete_confirm_desc: "The selected chats will be removed.",
   chatlist_cancel: "Cancel",
+
+  // Message actions
+  msg_reply: "Reply",
+  msg_copy: "Copy",
+  msg_edit: "Edit",
+  msg_forward: "Forward",
+  msg_delete: "Delete",
+  msg_copied: "Copied!",
+  msg_editing: "Editing message",
+  msg_replying_to: "Replying to",
+  msg_forwarded: "Forwarded",
+  msg_deleted: "Message deleted",
+  msg_edited: "edited",
+  msg_forward_to: "Forward to...",
+  msg_delete_confirm: "Delete this message?",
+  msg_cancel: "Cancel",
 };
 
 const de: typeof en = {
@@ -196,6 +227,11 @@ const de: typeof en = {
   settings_my_profile: "Mein Profil",
   settings_appearance: "Appearance",
   settings_language: "Language",
+  settings_logout: "Abmelden",
+  settings_logout_confirm_title: "Abmelden?",
+  settings_logout_confirm_desc: "Du wirst von deinem Konto abgemeldet.",
+  settings_logout_cancel: "Abbrechen",
+  settings_logout_confirm: "Abmelden",
   settings_delete_account: "Konto löschen",
   settings_delete_confirm_title: "Konto wirklich löschen?",
   settings_delete_confirm_desc:
@@ -232,6 +268,16 @@ const de: typeof en = {
   settings_bg_ocean: "Ozean",
   settings_bg_purple: "Lila",
   settings_bg_pattern: "Muster",
+  settings_bg_midnight: "Mitternacht",
+  settings_bg_aurora: "Aurora",
+  settings_bg_sand: "Sand",
+  settings_bg_forest: "Wald",
+  settings_bg_ember: "Glut",
+  settings_bg_ice: "Eis",
+  settings_bg_nebula: "Nebel",
+  settings_bg_slate: "Schiefer",
+  settings_bg_rose: "Rose",
+  settings_bg_void: "Void",
 
   settings_language_title: "Language",
 
@@ -245,6 +291,21 @@ const de: typeof en = {
   chatlist_delete_confirm_title: "Chats löschen?",
   chatlist_delete_confirm_desc: "Die ausgewählten Chats werden entfernt.",
   chatlist_cancel: "Abbrechen",
+
+  msg_reply: "Antworten",
+  msg_copy: "Kopieren",
+  msg_edit: "Bearbeiten",
+  msg_forward: "Weiterleiten",
+  msg_delete: "Löschen",
+  msg_copied: "Kopiert!",
+  msg_editing: "Nachricht bearbeiten",
+  msg_replying_to: "Antwort an",
+  msg_forwarded: "Weitergeleitet",
+  msg_deleted: "Nachricht gelöscht",
+  msg_edited: "bearbeitet",
+  msg_forward_to: "Weiterleiten an...",
+  msg_delete_confirm: "Diese Nachricht löschen?",
+  msg_cancel: "Abbrechen",
 };
 
 const es: typeof en = {
@@ -315,6 +376,11 @@ const es: typeof en = {
   settings_my_profile: "Mi perfil",
   settings_appearance: "Apariencia",
   settings_language: "Idioma",
+  settings_logout: "Cerrar sesión",
+  settings_logout_confirm_title: "¿Cerrar sesión?",
+  settings_logout_confirm_desc: "Se cerrará tu sesión.",
+  settings_logout_cancel: "Cancelar",
+  settings_logout_confirm: "Cerrar sesión",
   settings_delete_account: "Eliminar cuenta",
   settings_delete_confirm_title: "¿Realmente eliminar la cuenta?",
   settings_delete_confirm_desc:
@@ -351,6 +417,16 @@ const es: typeof en = {
   settings_bg_ocean: "Océano",
   settings_bg_purple: "Morado",
   settings_bg_pattern: "Patrón",
+  settings_bg_midnight: "Medianoche",
+  settings_bg_aurora: "Aurora",
+  settings_bg_sand: "Arena",
+  settings_bg_forest: "Bosque",
+  settings_bg_ember: "Brasa",
+  settings_bg_ice: "Hielo",
+  settings_bg_nebula: "Nebulosa",
+  settings_bg_slate: "Pizarra",
+  settings_bg_rose: "Rosa",
+  settings_bg_void: "Vacío",
 
   settings_language_title: "Idioma",
 
@@ -364,6 +440,21 @@ const es: typeof en = {
   chatlist_delete_confirm_title: "¿Eliminar chats?",
   chatlist_delete_confirm_desc: "Los chats seleccionados serán eliminados.",
   chatlist_cancel: "Cancelar",
+
+  msg_reply: "Responder",
+  msg_copy: "Copiar",
+  msg_edit: "Editar",
+  msg_forward: "Reenviar",
+  msg_delete: "Eliminar",
+  msg_copied: "¡Copiado!",
+  msg_editing: "Editando mensaje",
+  msg_replying_to: "Respondiendo a",
+  msg_forwarded: "Reenviado",
+  msg_deleted: "Mensaje eliminado",
+  msg_edited: "editado",
+  msg_forward_to: "Reenviar a...",
+  msg_delete_confirm: "¿Eliminar este mensaje?",
+  msg_cancel: "Cancelar",
 };
 
 const ar: typeof en = {
@@ -433,6 +524,11 @@ const ar: typeof en = {
   settings_my_profile: "ملفي الشخصي",
   settings_appearance: "المظهر",
   settings_language: "اللغة",
+  settings_logout: "تسجيل الخروج",
+  settings_logout_confirm_title: "تسجيل الخروج؟",
+  settings_logout_confirm_desc: "سيتم تسجيل خروجك من حسابك.",
+  settings_logout_cancel: "إلغاء",
+  settings_logout_confirm: "تسجيل الخروج",
   settings_delete_account: "حذف الحساب",
   settings_delete_confirm_title: "هل تريد حذف الحساب فعلاً؟",
   settings_delete_confirm_desc:
@@ -469,6 +565,16 @@ const ar: typeof en = {
   settings_bg_ocean: "محيط",
   settings_bg_purple: "بنفسجي",
   settings_bg_pattern: "نمط",
+  settings_bg_midnight: "منتصف الليل",
+  settings_bg_aurora: "أورورا",
+  settings_bg_sand: "رمال",
+  settings_bg_forest: "غابة",
+  settings_bg_ember: "جمر",
+  settings_bg_ice: "جليد",
+  settings_bg_nebula: "سديم",
+  settings_bg_slate: "أردوازي",
+  settings_bg_rose: "وردي",
+  settings_bg_void: "فراغ",
 
   settings_language_title: "اللغة",
 
@@ -482,6 +588,21 @@ const ar: typeof en = {
   chatlist_delete_confirm_title: "حذف المحادثات؟",
   chatlist_delete_confirm_desc: "سيتم إزالة المحادثات المحددة.",
   chatlist_cancel: "إلغاء",
+
+  msg_reply: "رد",
+  msg_copy: "نسخ",
+  msg_edit: "تعديل",
+  msg_forward: "إعادة توجيه",
+  msg_delete: "حذف",
+  msg_copied: "تم النسخ!",
+  msg_editing: "تعديل الرسالة",
+  msg_replying_to: "رداً على",
+  msg_forwarded: "معاد توجيهه",
+  msg_deleted: "تم حذف الرسالة",
+  msg_edited: "تم تعديله",
+  msg_forward_to: "إعادة التوجيه إلى...",
+  msg_delete_confirm: "حذف هذه الرسالة؟",
+  msg_cancel: "إلغاء",
 };
 
 const zh: typeof en = {
@@ -551,6 +672,11 @@ const zh: typeof en = {
   settings_my_profile: "我的个人资料",
   settings_appearance: "外观",
   settings_language: "语言",
+  settings_logout: "退出登录",
+  settings_logout_confirm_title: "退出登录？",
+  settings_logout_confirm_desc: "您将退出您的账户。",
+  settings_logout_cancel: "取消",
+  settings_logout_confirm: "退出登录",
   settings_delete_account: "删除账户",
   settings_delete_confirm_title: "确定要删除账户吗？",
   settings_delete_confirm_desc:
@@ -586,6 +712,16 @@ const zh: typeof en = {
   settings_bg_ocean: "海洋",
   settings_bg_purple: "紫色",
   settings_bg_pattern: "图案",
+  settings_bg_midnight: "午夜",
+  settings_bg_aurora: "极光",
+  settings_bg_sand: "沙漠",
+  settings_bg_forest: "森林",
+  settings_bg_ember: "余烬",
+  settings_bg_ice: "冰雪",
+  settings_bg_nebula: "星云",
+  settings_bg_slate: "石板",
+  settings_bg_rose: "玫瑰",
+  settings_bg_void: "虚空",
 
   settings_language_title: "语言",
 
@@ -599,6 +735,21 @@ const zh: typeof en = {
   chatlist_delete_confirm_title: "删除聊天？",
   chatlist_delete_confirm_desc: "所选聊天将被删除。",
   chatlist_cancel: "取消",
+
+  msg_reply: "回复",
+  msg_copy: "复制",
+  msg_edit: "编辑",
+  msg_forward: "转发",
+  msg_delete: "删除",
+  msg_copied: "已复制!",
+  msg_editing: "编辑消息",
+  msg_replying_to: "回复给",
+  msg_forwarded: "已转发",
+  msg_deleted: "消息已删除",
+  msg_edited: "已编辑",
+  msg_forward_to: "转发给...",
+  msg_delete_confirm: "删除此消息？",
+  msg_cancel: "取消",
 };
 
 export const translations: Record<string, typeof en> = { en, de, es, ar, zh };
