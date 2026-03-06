@@ -542,7 +542,8 @@ export default function ChatListScreen({
               onClick={() => {
                 setActiveTab("contacts");
                 setScreen("main");
-                setTimeout(() => searchInputRef.current?.focus(), 50);
+                // Focus immediately (same event loop tick) so iOS opens keyboard
+                searchInputRef.current?.focus();
               }}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
                 activeTab === "contacts"
