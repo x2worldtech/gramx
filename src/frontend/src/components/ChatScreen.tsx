@@ -552,20 +552,20 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   };
 
   const handleSendWithImage = async () => {
-    const content = selectedImage ? "[Photo]" : messageText.trim();
-    if (!content && !selectedImage) return;
+    if (!selectedImage) return;
 
-    const imagePreview = selectedImage?.previewUrl;
+    // Convert image to base64 for storage in message content
+    const file = selectedImage.file;
+    const imagePreview = selectedImage.previewUrl;
     handleRemoveImage();
     setMessageText("");
     inputRef.current?.focus();
 
     const tempId = `pending-${Date.now()}-${Math.random()}`;
+    // Optimistic pending message shows local preview immediately
     const pendingMsg: PendingMessage = {
       id: tempId,
-      content: selectedImage
-        ? `[Photo]${imagePreview ? `::${imagePreview}` : ""}`
-        : content,
+      content: `[img]${imagePreview}[/img]`,
       pending: true,
       failed: false,
       timestamp: BigInt(Date.now()) * BigInt(1_000_000),
@@ -576,8 +576,16 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     setPendingMessages((prev) => [...prev, pendingMsg]);
 
     try {
+      // Read file as base64 data URL
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
       await sendMessage.mutateAsync({
-        content: content || "[Photo]",
+        content: `[img]${base64}[/img]`,
         chatId: chat.id,
       });
       setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -1902,79 +1910,118 @@ function MessageBubble({
           </span>
         )}
 
-        <div
-          ref={bubbleRef}
-          className={
-            isDeleted
-              ? isOwn
-                ? "bubble-out opacity-50"
-                : "bubble-in opacity-50"
-              : isOwn
-                ? "bubble-out"
-                : "bubble-in"
-          }
-          style={{ WebkitTouchCallout: "none" }}
-          onTouchStart={startLongPress}
-          onTouchEnd={cancelLongPress}
-          onTouchMove={cancelLongPress}
-          onContextMenu={handleContextMenu}
-          onMouseDown={startLongPress}
-          onMouseUp={cancelLongPress}
-          onMouseLeave={cancelLongPress}
-        >
-          <div className="px-3 py-2 relative">
-            {/* Forwarded banner */}
-            {forwardedFrom && !isDeleted && (
-              <div
-                className={`flex items-center gap-1 mb-1 ${isOwn ? "text-white/70" : "text-primary"}`}
-              >
-                <Forward size={12} />
-                <span className="text-xs italic">{forwardedFrom}</span>
-              </div>
-            )}
-
-            {/* Reply quote */}
-            {replySource && !isDeleted && (
-              <div
-                className={`mb-2 pl-2 border-l-2 ${isOwn ? "border-white/60" : "border-primary"} rounded-sm`}
-              >
-                <p
-                  className={`text-xs font-semibold ${isOwn ? "text-white/80" : "text-primary"}`}
-                >
-                  {replySource.sender.name}
-                </p>
-                <p
-                  className={`text-xs truncate ${isOwn ? "text-white/60" : "text-muted-foreground"}`}
-                >
-                  {replySource.content}
-                </p>
-              </div>
-            )}
-
-            {isDeleted ? (
-              <p
-                className={`text-sm italic pr-10 ${isOwn ? "text-white/60" : "text-muted-foreground"}`}
-              >
-                🗑 Message deleted
-              </p>
-            ) : (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-10">
-                {displayContent}
-              </p>
-            )}
-
-            <span
-              className={`msg-time absolute bottom-2 right-2 flex items-center gap-1 ${
-                isOwn ? "text-white/70" : "text-muted-foreground"
-              }`}
+        {(() => {
+          const isImageMsg =
+            !isDeleted && displayContent.match(/^\[img\]([\s\S]+)\[\/img\]$/);
+          return (
+            <div
+              ref={bubbleRef}
+              className={
+                isDeleted
+                  ? isOwn
+                    ? "bubble-out opacity-50"
+                    : "bubble-in opacity-50"
+                  : isOwn
+                    ? `bubble-out${isImageMsg ? " !p-0 overflow-hidden" : ""}`
+                    : `bubble-in${isImageMsg ? " !p-0 overflow-hidden" : ""}`
+              }
+              style={{ WebkitTouchCallout: "none" }}
+              onTouchStart={startLongPress}
+              onTouchEnd={cancelLongPress}
+              onTouchMove={cancelLongPress}
+              onContextMenu={handleContextMenu}
+              onMouseDown={startLongPress}
+              onMouseUp={cancelLongPress}
+              onMouseLeave={cancelLongPress}
             >
-              {isEdited && (
-                <span className="text-[10px] opacity-70 italic">edited</span>
-              )}
-              {time}
-            </span>
-          </div>
-        </div>
+              <div className={isImageMsg ? "relative" : "px-3 py-2 relative"}>
+                {/* Forwarded banner */}
+                {forwardedFrom && !isDeleted && (
+                  <div
+                    className={`flex items-center gap-1 mb-1 ${isOwn ? "text-white/70" : "text-primary"}`}
+                  >
+                    <Forward size={12} />
+                    <span className="text-xs italic">{forwardedFrom}</span>
+                  </div>
+                )}
+
+                {/* Reply quote */}
+                {replySource && !isDeleted && (
+                  <div
+                    className={`mb-2 pl-2 border-l-2 ${isOwn ? "border-white/60" : "border-primary"} rounded-sm`}
+                  >
+                    <p
+                      className={`text-xs font-semibold ${isOwn ? "text-white/80" : "text-primary"}`}
+                    >
+                      {replySource.sender.name}
+                    </p>
+                    <p
+                      className={`text-xs truncate ${isOwn ? "text-white/60" : "text-muted-foreground"}`}
+                    >
+                      {replySource.content}
+                    </p>
+                  </div>
+                )}
+
+                {isDeleted ? (
+                  <p
+                    className={`text-sm italic pr-10 ${isOwn ? "text-white/60" : "text-muted-foreground"}`}
+                  >
+                    🗑 Message deleted
+                  </p>
+                ) : (
+                  (() => {
+                    const imgContentMatch = displayContent.match(
+                      /^\[img\]([\s\S]+)\[\/img\]$/,
+                    );
+                    if (imgContentMatch) {
+                      return (
+                        <div className="relative">
+                          <img
+                            src={imgContentMatch[1]}
+                            alt="Attachment"
+                            className="rounded-xl max-w-[220px] max-h-[280px] object-cover block"
+                          />
+                          <span
+                            className={`absolute bottom-1.5 right-1.5 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1 ${
+                              isOwn ? "text-white/90" : "text-white/90"
+                            }`}
+                          >
+                            {isEdited && (
+                              <span className="opacity-80 italic">edited</span>
+                            )}
+                            {time}
+                          </span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-10">
+                        {displayContent}
+                      </p>
+                    );
+                  })()
+                )}
+
+                {!displayContent.match(/^\[img\]([\s\S]+)\[\/img\]$/) &&
+                  !isDeleted && (
+                    <span
+                      className={`msg-time absolute bottom-2 right-2 flex items-center gap-1 ${
+                        isOwn ? "text-white/70" : "text-muted-foreground"
+                      }`}
+                    >
+                      {isEdited && (
+                        <span className="text-[10px] opacity-70 italic">
+                          edited
+                        </span>
+                      )}
+                      {time}
+                    </span>
+                  )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Reaction pills */}
         {reactions.length > 0 && !isDeleted && (
@@ -2024,46 +2071,63 @@ function PendingBubble({ message, onRetry, errorLabel }: PendingBubbleProps) {
     );
   }
 
-  const isPhoto = message.content.startsWith("[Photo]::");
-  const previewUrl = isPhoto ? message.content.split("::")[1] : null;
+  const imgMatch = message.content.match(/^\[img\]([\s\S]+)\[\/img\]$/);
+  const previewUrl = imgMatch ? imgMatch[1] : null;
 
   return (
     <div className="flex justify-end mt-0.5">
       <div className="max-w-[75%] flex flex-col items-end">
-        <div className="bubble-out opacity-80">
-          <div className="px-3 py-2 relative">
+        <div
+          className={`bubble-out opacity-80 ${previewUrl ? "!p-0 overflow-hidden" : ""}`}
+        >
+          <div className={previewUrl ? "relative" : "px-3 py-2 relative"}>
             {message.forwardedFrom && (
-              <div className="flex items-center gap-1 mb-1 text-white/70">
+              <div className="flex items-center gap-1 mb-1 text-white/70 px-3 pt-2">
                 <Forward size={12} />
                 <span className="text-xs italic">{message.forwardedFrom}</span>
               </div>
             )}
             {previewUrl ? (
-              <div className="mb-1">
+              <div className="relative">
                 <img
                   src={previewUrl}
-                  alt="Selected attachment"
-                  className="rounded-lg max-w-[180px] max-h-[160px] object-cover"
+                  alt="Attachment"
+                  className="rounded-2xl max-w-[220px] max-h-[280px] object-cover block"
                 />
+                <span className="absolute bottom-2 right-2 text-white/90 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1">
+                  {message.failed ? (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      className="text-red-300 text-[10px] font-medium"
+                    >
+                      {errorLabel}
+                    </button>
+                  ) : (
+                    <Loader2 size={11} className="animate-spin text-white/80" />
+                  )}
+                </span>
               </div>
             ) : (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-14">
-                {message.content}
-              </p>
+              <>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-14">
+                  {message.content}
+                </p>
+                <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">
+                  {message.failed ? (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      className="text-red-300 text-[10px] font-medium hover:text-red-100"
+                    >
+                      {errorLabel}
+                    </button>
+                  ) : (
+                    <Loader2 size={11} className="animate-spin text-white/60" />
+                  )}
+                </span>
+              </>
             )}
-            <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">
-              {message.failed ? (
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  className="text-red-300 text-[10px] font-medium hover:text-red-100"
-                >
-                  {errorLabel}
-                </button>
-              ) : (
-                <Loader2 size={11} className="animate-spin text-white/60" />
-              )}
-            </span>
           </div>
         </div>
       </div>
