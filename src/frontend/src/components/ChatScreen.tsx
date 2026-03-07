@@ -171,7 +171,11 @@ interface ChatScreenProps {
 export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   const { data: chatData } = useChat(chat.id);
   const sendMessage = useSendMessage();
-  const { chatBackground, avatarImage: myAvatarImage } = useSettings();
+  const {
+    chatBackground,
+    bubbleTheme,
+    avatarImage: myAvatarImage,
+  } = useSettings();
   const { t } = useTranslation();
   const [messageText, setMessageText] = useState("");
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
@@ -278,6 +282,10 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   const { data: otherUserAvatarImage } = useAvatarImage(
     otherUser?.principal ?? null,
   );
+
+  const groupAvatarImage = isGroup
+    ? localStorage.getItem(`groupAvatar_${chat.id}`)
+    : null;
 
   const senderPrincipals = isGroup
     ? Array.from(
@@ -1120,7 +1128,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
             <Avatar
               name={displayName}
               size="sm"
-              avatarImage={isGroup ? undefined : otherUserAvatarImage}
+              avatarImage={isGroup ? groupAvatarImage : otherUserAvatarImage}
             />
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-semibold text-foreground truncate">
@@ -1150,7 +1158,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
 
       {/* Messages */}
       <div
-        className={`flex-1 chat-bg-${chatBackground} overflow-y-auto overscroll-contain px-3 py-2 space-y-1`}
+        className={`flex-1 chat-bg-${chatBackground} bubble-theme-${bubbleTheme} overflow-y-auto overscroll-contain px-3 py-2 space-y-1`}
       >
         {allMessages.length === 0 && pendingMessages.length === 0 && (
           <div className="flex justify-center py-8">
@@ -1169,7 +1177,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
           const senderAvatar = isOwn
             ? myAvatarImage
             : (senderAvatarMap.get(msg.sender.principal.toString()) ??
-              (isGroup ? null : otherUserAvatarImage));
+              (isGroup ? groupAvatarImage : otherUserAvatarImage));
           const msgLocal = localData.get(msg.id);
           const replySource =
             msgLocal?.replyToId != null

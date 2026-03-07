@@ -22,6 +22,8 @@ export default function GroupInfoSheet({
   const memberPrincipals = chat.participants.map((m) => m.principal.toString());
   const memberAvatarMap = useAvatarImages(memberPrincipals);
 
+  const groupAvatarImage = localStorage.getItem(`groupAvatar_${chat.id}`);
+
   return (
     <AnimatePresence>
       {open && (
@@ -66,10 +68,20 @@ export default function GroupInfoSheet({
 
             {/* Group header */}
             <div className="flex flex-col items-center gap-3 pb-6 px-4 flex-shrink-0">
-              <div className="w-20 h-20 rounded-full avatar-gradient-1 flex items-center justify-center">
-                <span className="text-white font-bold text-2xl">
-                  {chat.name.slice(0, 2).toUpperCase()}
-                </span>
+              <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0">
+                {groupAvatarImage ? (
+                  <img
+                    src={groupAvatarImage}
+                    alt={chat.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full avatar-gradient-1 flex items-center justify-center">
+                    <span className="text-white font-bold text-2xl">
+                      {chat.name.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="text-center">
                 <h3 className="text-xl font-bold text-foreground">

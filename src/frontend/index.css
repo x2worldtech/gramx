@@ -199,6 +199,17 @@
     border-top: 0.5px solid oklch(var(--navbar-border));
   }
 
+  /* Inset chat-row divider — Telegram-style thin line starting after the avatar */
+  .chat-row-divider {
+    border-bottom: 0.5px solid oklch(var(--border));
+  }
+
+  /* Last sibling inside the animated list: no divider on the final row */
+  *:last-child > .chat-row-divider,
+  button:last-child .chat-row-divider {
+    border-bottom: none;
+  }
+
   .bubble-out {
     background: oklch(var(--bubble-out));
     color: oklch(var(--bubble-out-fg));
@@ -325,6 +336,109 @@
     background-color: oklch(0.06 0.01 250);
     background-image:
       radial-gradient(ellipse at 50% 50%, oklch(0.12 0.04 245 / 0.4) 0%, transparent 70%);
+  }
+
+  /* ── Bubble Themes ── */
+  /* Theme 0: Default (Telegram Blue / White) — no override needed, uses CSS vars */
+
+  /* Theme 1: Midnight Blue — eigene + eingehende Blautöne */
+  .bubble-theme-1 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.48 0.22 240), oklch(0.38 0.20 260));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-1 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.20 0.04 245), oklch(0.24 0.06 255));
+    color: oklch(0.92 0.005 240);
+  }
+
+  /* Theme 2: Sunset — warme Orange/Rosa-Fades */
+  .bubble-theme-2 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.68 0.22 35), oklch(0.60 0.24 15));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-2 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.92 0.03 25), oklch(0.88 0.05 15));
+    color: oklch(0.18 0.02 30);
+  }
+
+  /* Theme 3: Forest — Grüntöne */
+  .bubble-theme-3 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.52 0.18 155), oklch(0.42 0.16 145));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-3 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.88 0.04 145), oklch(0.84 0.06 150));
+    color: oklch(0.18 0.04 150);
+  }
+
+  /* Theme 4: Purple Dream — Lila/Violet-Fades */
+  .bubble-theme-4 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.55 0.24 295), oklch(0.45 0.22 310));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-4 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.92 0.04 295), oklch(0.88 0.06 300));
+    color: oklch(0.20 0.06 295);
+  }
+
+  /* Theme 5: Rose Gold — sanftes Pink/Gold */
+  .bubble-theme-5 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.70 0.18 20), oklch(0.78 0.14 55));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-5 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.93 0.03 10), oklch(0.90 0.04 350));
+    color: oklch(0.20 0.04 15);
+  }
+
+  /* Theme 6: Arctic — Eisblau/Weiß */
+  .bubble-theme-6 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.62 0.14 210), oklch(0.72 0.10 200));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-6 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.95 0.02 210), oklch(0.90 0.03 215));
+    color: oklch(0.18 0.03 215);
+  }
+
+  /* Theme 7: Charcoal — Dunkelgrau/Slate */
+  .bubble-theme-7 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.40 0.04 255), oklch(0.30 0.03 245));
+    color: oklch(0.94 0.005 240);
+  }
+  .bubble-theme-7 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.82 0.006 250), oklch(0.76 0.008 245));
+    color: oklch(0.18 0.02 250);
+  }
+
+  /* Theme 8: Nebula — Lila/Pink/Blau Fade */
+  .bubble-theme-8 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.50 0.26 295), oklch(0.45 0.22 340));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-8 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.18 0.06 285), oklch(0.22 0.08 300));
+    color: oklch(0.92 0.005 290);
+  }
+
+  /* Theme 9: Teal Mint — Türkis/Mintgrün */
+  .bubble-theme-9 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.58 0.18 185), oklch(0.65 0.16 170));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-9 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.90 0.04 175), oklch(0.86 0.06 180));
+    color: oklch(0.18 0.05 180);
+  }
+
+  /* Theme 10: Ember — Glut-Orange/Rot */
+  .bubble-theme-10 .bubble-out {
+    background: linear-gradient(135deg, oklch(0.60 0.22 40), oklch(0.50 0.24 25));
+    color: oklch(1 0 0);
+  }
+  .bubble-theme-10 .bubble-in {
+    background: linear-gradient(135deg, oklch(0.92 0.04 40), oklch(0.88 0.06 30));
+    color: oklch(0.18 0.04 35);
   }
 
   .avatar-gradient-1 { background: linear-gradient(135deg, oklch(0.62 0.2 230), oklch(0.52 0.22 250)); }

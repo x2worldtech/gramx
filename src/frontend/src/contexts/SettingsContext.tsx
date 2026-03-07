@@ -14,6 +14,7 @@ interface SettingsContextValue {
   avatarColor: number;
   avatarImage: string | null;
   chatBackground: number;
+  bubbleTheme: number;
   darkMode: boolean;
   language: AppLanguage;
   setDisplayName: (name: string) => void;
@@ -21,6 +22,7 @@ interface SettingsContextValue {
   setAvatarColor: (idx: number) => void;
   setAvatarImage: (img: string | null) => void;
   setChatBackground: (idx: number) => void;
+  setBubbleTheme: (idx: number) => void;
   setDarkMode: (v: boolean) => void;
   setLanguage: (lang: AppLanguage) => void;
 }
@@ -31,6 +33,7 @@ const LS_BIO = "tg_bio";
 const LS_AVATAR_COLOR = "tg_avatarColor";
 const LS_AVATAR_IMAGE = "tg_avatarImage";
 const LS_CHAT_BG = "tg_chatBg";
+const LS_BUBBLE_THEME = "tg_bubbleTheme";
 const LS_DARK_MODE = "tg_darkMode";
 const LS_LANGUAGE = "tg_language";
 
@@ -55,6 +58,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   );
   const [chatBackground, setChatBackgroundState] = useState<number>(() =>
     readLS(LS_CHAT_BG, 0),
+  );
+  const [bubbleTheme, setBubbleThemeState] = useState<number>(() =>
+    readLS(LS_BUBBLE_THEME, 0),
   );
   const [darkMode, setDarkModeState] = useState<boolean>(() =>
     readLS(LS_DARK_MODE, false),
@@ -96,6 +102,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(LS_CHAT_BG, JSON.stringify(idx));
   }, []);
 
+  const setBubbleTheme = useCallback((idx: number) => {
+    setBubbleThemeState(idx);
+    localStorage.setItem(LS_BUBBLE_THEME, JSON.stringify(idx));
+  }, []);
+
   const setDarkMode = useCallback((v: boolean) => {
     setDarkModeState(v);
     localStorage.setItem(LS_DARK_MODE, JSON.stringify(v));
@@ -115,6 +126,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         avatarColor,
         avatarImage,
         chatBackground,
+        bubbleTheme,
         darkMode,
         language,
         setDisplayName,
@@ -122,6 +134,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setAvatarColor,
         setAvatarImage,
         setChatBackground,
+        setBubbleTheme,
         setDarkMode,
         setLanguage,
       }}

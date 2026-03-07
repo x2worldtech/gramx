@@ -1,7 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Principal } from "@icp-sdk/core/principal";
-import { Check, ChevronRight, Loader2, Search, Users, X } from "lucide-react";
+import {
+  Camera,
+  Check,
+  ChevronRight,
+  Loader2,
+  Search,
+  Users,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -33,8 +41,10 @@ export default function NewChatSheet({
   const [mode, setMode] = useState<Mode>("select");
   const [query, setQuery] = useState("");
   const [groupName, setGroupName] = useState("");
+  const [groupImage, setGroupImage] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const groupImageInputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
 
   const { data: results = [], isLoading: searching } = useSearchUsers(query);
@@ -55,10 +65,24 @@ export default function NewChatSheet({
       setMode("select");
       setQuery("");
       setGroupName("");
+      setGroupImage(null);
       setSelectedUsers([]);
       setTimeout(() => searchInputRef.current?.focus(), 300);
     }
   }, [open]);
+
+  const handleGroupImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result;
+      if (typeof result === "string") setGroupImage(result);
+    };
+    reader.readAsDataURL(file);
+    // reset so same file can be re-selected
+    e.target.value = "";
+  };
 
   const handleSelectUser = async (user: User) => {
     if (mode === "select") {
@@ -92,6 +116,10 @@ export default function NewChatSheet({
         name: groupName.trim(),
         participants: selectedUsers.map((u) => u.principal as Principal),
       });
+      // Save group avatar to localStorage
+      if (groupImage) {
+        localStorage.setItem(`groupAvatar_${chat.id}`, groupImage);
+      }
       onChatCreated(chat);
     } catch {
       toast.error(t("new_group_error_create"));
@@ -182,15 +210,55 @@ export default function NewChatSheet({
               </button>
             )}
 
-            {/* Group name input */}
+            {/* Group image picker + name input */}
             {mode === "group" && (
-              <div className="px-4 mb-3 flex-shrink-0">
+              <div className="px-4 mb-3 flex-shrink-0 flex flex-col items-center gap-3">
+                {/* Hidden file input */}
+                <input
+                  ref={groupImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleGroupImageSelect}
+                />
+
+                {/* Avatar picker circle */}
+                <button
+                  type="button"
+                  data-ocid="group.avatar_upload_button"
+                  onClick={() => groupImageInputRef.current?.click()}
+                  className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0 focus:outline-none"
+                  aria-label="Select group photo"
+                >
+                  {groupImage ? (
+                    <>
+                      <img
+                        src={groupImage}
+                        alt="Group avatar"
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Edit overlay */}
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 active:opacity-100 transition-opacity">
+                        <Camera size={20} className="text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full bg-primary/20 border-2 border-dashed border-primary/40 flex flex-col items-center justify-center gap-1">
+                      <Camera size={24} className="text-primary" />
+                      <span className="text-[9px] font-medium text-primary/80 leading-tight text-center px-1">
+                        Add Photo
+                      </span>
+                    </div>
+                  )}
+                </button>
+
+                {/* Group name input */}
                 <Input
                   data-ocid="group.name_input"
                   placeholder={t("new_group_name_placeholder")}
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  className="h-11 rounded-xl border-border bg-input text-base"
+                  className="h-11 rounded-xl border-border bg-input text-base w-full"
                   autoFocus
                 />
               </div>

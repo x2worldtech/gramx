@@ -305,7 +305,7 @@ export default function ChatListScreen({
                 type="button"
                 data-ocid="chat_list.archived_folder.button"
                 onClick={() => setScreen("archived")}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left border-b border-border/40"
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left"
               >
                 <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
                   <Archive size={20} className="text-primary" />
@@ -679,7 +679,14 @@ function ChatRow({
           .find((p) => p.principal.toString() !== myUser.principal.toString())
           ?.principal.toString()
       : null;
-  const avatarImage = otherPrincipal ? avatarMap?.get(otherPrincipal) : null;
+  const groupAvatarImage = isGroup
+    ? localStorage.getItem(`groupAvatar_${chat.id}`)
+    : null;
+  const avatarImage = isGroup
+    ? groupAvatarImage
+    : otherPrincipal
+      ? avatarMap?.get(otherPrincipal)
+      : null;
 
   const unreadCount = principalId ? getUnreadCount(chat, principalId) : 0;
 
@@ -688,7 +695,7 @@ function ChatRow({
       type="button"
       data-ocid={dataOcid}
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left border-b border-border/40 last:border-b-0"
+      className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left relative"
     >
       {/* Checkbox in edit mode */}
       {editMode && (
@@ -746,7 +753,8 @@ function ChatRow({
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
+      {/* Content + inset divider */}
+      <div className="flex-1 min-w-0 chat-row-divider pb-3 -mb-3">
         <div className="flex items-baseline justify-between gap-2">
           <span className="font-semibold text-sm text-foreground truncate">
             {displayName}
@@ -780,9 +788,9 @@ function ChatRow({
 
 function ChatRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40">
+    <div className="flex items-center gap-3 px-4 py-3">
       <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
-      <div className="flex-1 space-y-2">
+      <div className="flex-1 space-y-2 chat-row-divider pb-3 -mb-3">
         <div className="flex justify-between">
           <Skeleton className="h-3.5 w-28 rounded" />
           <Skeleton className="h-3 w-8 rounded" />

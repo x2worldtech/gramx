@@ -128,8 +128,27 @@ const en = {
   settings_bg_rose: "Rose",
   settings_bg_void: "Void",
 
+  // Settings - Bubble Color
+  settings_bubble_color_label: "Message Bubble Color",
+  settings_bubble_default: "Default",
+  settings_bubble_midnight: "Midnight",
+  settings_bubble_sunset: "Sunset",
+  settings_bubble_forest: "Forest",
+  settings_bubble_purple: "Purple",
+  settings_bubble_rosegold: "Rose Gold",
+  settings_bubble_arctic: "Arctic",
+  settings_bubble_charcoal: "Charcoal",
+  settings_bubble_nebula: "Nebula",
+  settings_bubble_teal: "Teal",
+  settings_bubble_ember: "Ember",
+
   // Settings - Language
   settings_language_title: "Language",
+
+  // Settings - Profile Edit mode
+  settings_edit: "Edit",
+  settings_done: "Done",
+  settings_cancel: "Cancel",
 
   chatlist_edit: "Edit",
   chatlist_done: "Done",
@@ -279,7 +298,24 @@ const de: typeof en = {
   settings_bg_rose: "Rose",
   settings_bg_void: "Void",
 
+  settings_bubble_color_label: "Nachrichtenblasen-Farbe",
+  settings_bubble_default: "Standard",
+  settings_bubble_midnight: "Mitternacht",
+  settings_bubble_sunset: "Sonnenuntergang",
+  settings_bubble_forest: "Wald",
+  settings_bubble_purple: "Lila",
+  settings_bubble_rosegold: "Roségold",
+  settings_bubble_arctic: "Arktis",
+  settings_bubble_charcoal: "Anthrazit",
+  settings_bubble_nebula: "Nebula",
+  settings_bubble_teal: "Türkis",
+  settings_bubble_ember: "Glut",
+
   settings_language_title: "Language",
+
+  settings_edit: "Bearbeiten",
+  settings_done: "Fertig",
+  settings_cancel: "Abbrechen",
 
   chatlist_edit: "Bearbeiten",
   chatlist_done: "Fertig",
@@ -428,7 +464,24 @@ const es: typeof en = {
   settings_bg_rose: "Rosa",
   settings_bg_void: "Vacío",
 
+  settings_bubble_color_label: "Color de burbuja",
+  settings_bubble_default: "Predeterminado",
+  settings_bubble_midnight: "Medianoche",
+  settings_bubble_sunset: "Atardecer",
+  settings_bubble_forest: "Bosque",
+  settings_bubble_purple: "Morado",
+  settings_bubble_rosegold: "Oro rosado",
+  settings_bubble_arctic: "Ártico",
+  settings_bubble_charcoal: "Carbón",
+  settings_bubble_nebula: "Nebulosa",
+  settings_bubble_teal: "Turquesa",
+  settings_bubble_ember: "Brasa",
+
   settings_language_title: "Idioma",
+
+  settings_edit: "Editar",
+  settings_done: "Listo",
+  settings_cancel: "Cancelar",
 
   chatlist_edit: "Editar",
   chatlist_done: "Listo",
@@ -576,7 +629,24 @@ const ar: typeof en = {
   settings_bg_rose: "وردي",
   settings_bg_void: "فراغ",
 
+  settings_bubble_color_label: "لون فقاعة الرسائل",
+  settings_bubble_default: "افتراضي",
+  settings_bubble_midnight: "منتصف الليل",
+  settings_bubble_sunset: "غروب الشمس",
+  settings_bubble_forest: "غابة",
+  settings_bubble_purple: "بنفسجي",
+  settings_bubble_rosegold: "ذهبي وردي",
+  settings_bubble_arctic: "قطبي",
+  settings_bubble_charcoal: "فحمي",
+  settings_bubble_nebula: "سديم",
+  settings_bubble_teal: "أزرق مخضر",
+  settings_bubble_ember: "جمر",
+
   settings_language_title: "اللغة",
+
+  settings_edit: "تعديل",
+  settings_done: "تم",
+  settings_cancel: "إلغاء",
 
   chatlist_edit: "تعديل",
   chatlist_done: "تم",
@@ -723,7 +793,24 @@ const zh: typeof en = {
   settings_bg_rose: "玫瑰",
   settings_bg_void: "虚空",
 
+  settings_bubble_color_label: "消息气泡颜色",
+  settings_bubble_default: "默认",
+  settings_bubble_midnight: "午夜",
+  settings_bubble_sunset: "日落",
+  settings_bubble_forest: "森林",
+  settings_bubble_purple: "紫色",
+  settings_bubble_rosegold: "玫瑰金",
+  settings_bubble_arctic: "北极",
+  settings_bubble_charcoal: "炭灰",
+  settings_bubble_nebula: "星云",
+  settings_bubble_teal: "青绿",
+  settings_bubble_ember: "余烬",
+
   settings_language_title: "语言",
+
+  settings_edit: "编辑",
+  settings_done: "完成",
+  settings_cancel: "取消",
 
   chatlist_edit: "编辑",
   chatlist_done: "完成",
@@ -873,7 +960,24 @@ const fr: typeof en = {
   settings_bg_rose: "Rose",
   settings_bg_void: "Vide",
 
+  settings_bubble_color_label: "Couleur des bulles",
+  settings_bubble_default: "Défaut",
+  settings_bubble_midnight: "Minuit",
+  settings_bubble_sunset: "Coucher de soleil",
+  settings_bubble_forest: "Forêt",
+  settings_bubble_purple: "Violet",
+  settings_bubble_rosegold: "Or rose",
+  settings_bubble_arctic: "Arctique",
+  settings_bubble_charcoal: "Charbon",
+  settings_bubble_nebula: "Nébuleuse",
+  settings_bubble_teal: "Sarcelle",
+  settings_bubble_ember: "Braise",
+
   settings_language_title: "Langue",
+
+  settings_edit: "Modifier",
+  settings_done: "Terminé",
+  settings_cancel: "Annuler",
 
   chatlist_edit: "Modifier",
   chatlist_done: "Terminé",
@@ -1023,7 +1127,24 @@ const ru: typeof en = {
   settings_bg_rose: "Роза",
   settings_bg_void: "Пустота",
 
+  settings_bubble_color_label: "Цвет пузырей сообщений",
+  settings_bubble_default: "По умолчанию",
+  settings_bubble_midnight: "Полночь",
+  settings_bubble_sunset: "Закат",
+  settings_bubble_forest: "Лес",
+  settings_bubble_purple: "Фиолетовый",
+  settings_bubble_rosegold: "Розовое золото",
+  settings_bubble_arctic: "Арктика",
+  settings_bubble_charcoal: "Уголь",
+  settings_bubble_nebula: "Туманность",
+  settings_bubble_teal: "Бирюза",
+  settings_bubble_ember: "Жар",
+
   settings_language_title: "Язык",
+
+  settings_edit: "Изменить",
+  settings_done: "Готово",
+  settings_cancel: "Отмена",
 
   chatlist_edit: "Выбрать",
   chatlist_done: "Готово",

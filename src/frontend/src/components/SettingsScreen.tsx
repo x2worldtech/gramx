@@ -84,12 +84,14 @@ export default function SettingsScreen({
     avatarColor,
     avatarImage,
     chatBackground,
+    bubbleTheme,
     darkMode,
     language,
     setBio,
     setAvatarColor,
     setAvatarImage,
     setChatBackground,
+    setBubbleTheme,
     setDisplayName,
     setDarkMode,
     setLanguage,
@@ -124,8 +126,9 @@ export default function SettingsScreen({
   // Local edit states
   const [nameInput, setNameInput] = useState(displayName || myUser?.name || "");
   const [bioInput, setBioInput] = useState(bio);
-  const [savingName, setSavingName] = useState(false);
+  const [_savingName, setSavingName] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const currentInitials = getInitials(nameInput || myUser?.name || "?");
 
@@ -326,6 +329,149 @@ export default function SettingsScreen({
         backgroundColor: "oklch(0.06 0.01 250)",
         backgroundImage:
           "radial-gradient(ellipse at 50% 50%, oklch(0.12 0.04 245 / 0.4) 0%, transparent 70%)",
+      },
+    },
+  ];
+
+  // Bubble theme definitions
+  const BUBBLE_THEMES: {
+    labelKey: Parameters<typeof t>[0];
+    outStyle: React.CSSProperties;
+    inStyle: React.CSSProperties;
+  }[] = [
+    {
+      labelKey: "settings_bubble_default",
+      outStyle: { background: "oklch(0.57 0.18 233)", color: "white" },
+      inStyle: { background: "oklch(1 0 0)", color: "oklch(0.12 0.01 250)" },
+    },
+    {
+      labelKey: "settings_bubble_midnight",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.48 0.22 240), oklch(0.38 0.20 260))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.20 0.04 245), oklch(0.24 0.06 255))",
+        color: "oklch(0.92 0.005 240)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_sunset",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.68 0.22 35), oklch(0.60 0.24 15))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.92 0.03 25), oklch(0.88 0.05 15))",
+        color: "oklch(0.18 0.02 30)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_forest",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.52 0.18 155), oklch(0.42 0.16 145))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.88 0.04 145), oklch(0.84 0.06 150))",
+        color: "oklch(0.18 0.04 150)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_purple",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.55 0.24 295), oklch(0.45 0.22 310))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.92 0.04 295), oklch(0.88 0.06 300))",
+        color: "oklch(0.20 0.06 295)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_rosegold",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.70 0.18 20), oklch(0.78 0.14 55))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.93 0.03 10), oklch(0.90 0.04 350))",
+        color: "oklch(0.20 0.04 15)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_arctic",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.62 0.14 210), oklch(0.72 0.10 200))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.95 0.02 210), oklch(0.90 0.03 215))",
+        color: "oklch(0.18 0.03 215)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_charcoal",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.40 0.04 255), oklch(0.30 0.03 245))",
+        color: "oklch(0.94 0.005 240)",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.82 0.006 250), oklch(0.76 0.008 245))",
+        color: "oklch(0.18 0.02 250)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_nebula",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.50 0.26 295), oklch(0.45 0.22 340))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.18 0.06 285), oklch(0.22 0.08 300))",
+        color: "oklch(0.92 0.005 290)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_teal",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.58 0.18 185), oklch(0.65 0.16 170))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.90 0.04 175), oklch(0.86 0.06 180))",
+        color: "oklch(0.18 0.05 180)",
+      },
+    },
+    {
+      labelKey: "settings_bubble_ember",
+      outStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.60 0.22 40), oklch(0.50 0.24 25))",
+        color: "white",
+      },
+      inStyle: {
+        background:
+          "linear-gradient(135deg, oklch(0.92 0.04 40), oklch(0.88 0.06 30))",
+        color: "oklch(0.18 0.04 35)",
       },
     },
   ];
@@ -586,19 +732,66 @@ export default function SettingsScreen({
       >
         {/* Header */}
         <div className="ios-navbar safe-top px-2 pt-1 pb-3 flex-shrink-0 z-10">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              data-ocid="settings.back_button"
-              onClick={navigateBack}
-              className="flex items-center gap-0.5 text-primary px-2 py-2 active:opacity-60 transition-opacity"
-              aria-label={t("settings_title")}
-            >
-              <ChevronLeft size={26} strokeWidth={2} />
-              <span className="text-base font-normal">
-                {t("settings_title")}
-              </span>
-            </button>
+          <div className="flex items-center justify-between">
+            {/* Left: Back (view mode) or Cancel (edit mode) */}
+            {isEditingProfile ? (
+              <button
+                type="button"
+                data-ocid="settings.profile_cancel_button"
+                onClick={() => {
+                  setNameInput(displayName || myUser?.name || "");
+                  setBioInput(bio);
+                  setIsEditingProfile(false);
+                }}
+                className="text-primary text-base font-normal px-2 py-2 active:opacity-60 transition-opacity"
+              >
+                {t("settings_cancel") || "Cancel"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-ocid="settings.back_button"
+                onClick={navigateBack}
+                className="flex items-center gap-0.5 text-primary px-2 py-2 active:opacity-60 transition-opacity"
+                aria-label={t("settings_title")}
+              >
+                <ChevronLeft size={26} strokeWidth={2} />
+                <span className="text-base font-normal">
+                  {t("settings_title")}
+                </span>
+              </button>
+            )}
+
+            {/* Right: Edit (view mode) or Done (edit mode) */}
+            {isEditingProfile ? (
+              <button
+                type="button"
+                data-ocid="settings.profile_done_button"
+                onClick={async () => {
+                  const trimmedName = nameInput.trim();
+                  const savedName = displayName || myUser?.name || "";
+                  if (trimmedName && trimmedName !== savedName) {
+                    await handleSaveName();
+                  }
+                  if (bioInput !== bio) {
+                    handleSaveBio();
+                  }
+                  setIsEditingProfile(false);
+                }}
+                className="text-primary text-base font-semibold px-2 py-2 active:opacity-60 transition-opacity"
+              >
+                {t("settings_done") || "Done"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-ocid="settings.profile_edit_button"
+                onClick={() => setIsEditingProfile(true)}
+                className="text-primary text-base font-normal px-2 py-2 active:opacity-60 transition-opacity"
+              >
+                {t("settings_edit") || "Edit"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -680,65 +873,61 @@ export default function SettingsScreen({
           {/* Display name */}
           <SectionHeader label={t("settings_display_name_label")} />
           <div className="mx-4 bg-card rounded-2xl border border-border/60 overflow-hidden mb-4">
-            <div className="px-4 pt-3 pb-2">
-              <input
-                type="text"
-                data-ocid="settings.display_name_input"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                placeholder={t("settings_display_name_placeholder")}
-                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-b border-border/40 pb-2"
-                maxLength={60}
-              />
-            </div>
-            <div className="px-4 pb-3 flex justify-end">
-              <Button
-                data-ocid="settings.display_name_save_button"
-                onClick={handleSaveName}
-                disabled={
-                  savingName ||
-                  !nameInput.trim() ||
-                  nameInput.trim() === (displayName || myUser?.name || "")
-                }
-                size="sm"
-                className="rounded-xl h-8 px-4 text-xs font-medium"
-              >
-                {savingName ? (
-                  <Loader2 size={13} className="animate-spin mr-1.5" />
-                ) : null}
-                {savingName ? t("settings_saving") : t("settings_save")}
-              </Button>
+            <div className="px-4 py-3">
+              {isEditingProfile ? (
+                <input
+                  type="text"
+                  data-ocid="settings.display_name_input"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder={t("settings_display_name_placeholder")}
+                  className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-b border-border/40 pb-2"
+                  maxLength={60}
+                  style={{ fontSize: "16px" }}
+                />
+              ) : (
+                <p className="text-sm text-foreground">
+                  {nameInput || myUser?.name || (
+                    <span className="text-muted-foreground">
+                      {t("settings_display_name_placeholder")}
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Bio */}
           <SectionHeader label={t("settings_bio_label")} />
           <div className="mx-4 bg-card rounded-2xl border border-border/60 overflow-hidden mb-4">
-            <div className="px-4 pt-3 pb-2 relative">
-              <textarea
-                data-ocid="settings.bio_textarea"
-                value={bioInput}
-                onChange={(e) => {
-                  if (e.target.value.length <= 200) setBioInput(e.target.value);
-                }}
-                placeholder={t("settings_bio_placeholder")}
-                rows={3}
-                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none border-b border-border/40 pb-2"
-              />
-              <p className="text-right text-[11px] text-muted-foreground mt-1">
-                {bioInput.length}/200
-              </p>
-            </div>
-            <div className="px-4 pb-3 flex justify-end">
-              <Button
-                data-ocid="settings.bio_save_button"
-                onClick={handleSaveBio}
-                disabled={bioInput === bio}
-                size="sm"
-                className="rounded-xl h-8 px-4 text-xs font-medium"
-              >
-                {t("settings_save")}
-              </Button>
+            <div className="px-4 py-3 relative">
+              {isEditingProfile ? (
+                <>
+                  <textarea
+                    data-ocid="settings.bio_textarea"
+                    value={bioInput}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 200)
+                        setBioInput(e.target.value);
+                    }}
+                    placeholder={t("settings_bio_placeholder")}
+                    rows={3}
+                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none border-b border-border/40 pb-2"
+                    style={{ fontSize: "16px" }}
+                  />
+                  <p className="text-right text-[11px] text-muted-foreground mt-1">
+                    {bioInput.length}/200
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-foreground">
+                  {bioInput || (
+                    <span className="text-muted-foreground">
+                      {t("settings_bio_placeholder") || "Add a bio..."}
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
@@ -882,7 +1071,7 @@ export default function SettingsScreen({
 
           {/* Chat background */}
           <SectionHeader label={t("settings_chat_bg_label")} />
-          <div className="mx-4 mb-4">
+          <div className="mx-4 mb-6">
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {CHAT_BACKGROUNDS.map((bg, idx) => (
                 <button
@@ -926,6 +1115,71 @@ export default function SettingsScreen({
                     }`}
                   >
                     {t(bg.labelKey)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bubble Color */}
+          <SectionHeader label={t("settings_bubble_color_label")} />
+          <div className="mx-4 mb-6">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {BUBBLE_THEMES.map((theme, idx) => (
+                <button
+                  key={theme.labelKey}
+                  type="button"
+                  data-ocid={`settings.bubble_theme.${idx + 1}`}
+                  onClick={() => setBubbleTheme(idx)}
+                  className="flex-shrink-0 flex flex-col items-center gap-2"
+                  aria-label={`Bubble: ${t(theme.labelKey)}`}
+                >
+                  <div
+                    className={`relative w-16 h-24 rounded-2xl overflow-hidden border-2 transition-all bg-[oklch(0.95_0.01_235)] ${
+                      bubbleTheme === idx
+                        ? "border-primary shadow-md scale-105"
+                        : "border-border/40 active:scale-95"
+                    }`}
+                  >
+                    {/* Mini bubbles preview */}
+                    <div className="absolute inset-0 p-2 flex flex-col justify-end gap-1.5">
+                      <div
+                        className="self-end h-5 w-10 rounded-xl flex items-center justify-center"
+                        style={theme.outStyle}
+                      >
+                        <div className="w-6 h-1.5 rounded-full bg-current opacity-60" />
+                      </div>
+                      <div
+                        className="self-start h-5 w-8 rounded-xl flex items-center justify-center"
+                        style={theme.inStyle}
+                      >
+                        <div className="w-5 h-1.5 rounded-full bg-current opacity-60" />
+                      </div>
+                      <div
+                        className="self-end h-5 w-9 rounded-xl flex items-center justify-center"
+                        style={theme.outStyle}
+                      >
+                        <div className="w-5 h-1.5 rounded-full bg-current opacity-60" />
+                      </div>
+                    </div>
+                    {bubbleTheme === idx && (
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check
+                          size={11}
+                          strokeWidth={3}
+                          className="text-white"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <span
+                    className={`text-[11px] font-medium transition-colors ${
+                      bubbleTheme === idx
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {t(theme.labelKey)}
                   </span>
                 </button>
               ))}
