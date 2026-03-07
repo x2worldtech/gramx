@@ -6,7 +6,16 @@ import {
   useState,
 } from "react";
 
-export type AppLanguage = "en" | "de" | "es" | "ar" | "zh" | "fr" | "ru";
+export type AppLanguage =
+  | "en"
+  | "de"
+  | "es"
+  | "ar"
+  | "zh"
+  | "fr"
+  | "ru"
+  | "it"
+  | "ko";
 
 interface SettingsContextValue {
   displayName: string;

@@ -58,6 +58,8 @@ const LANGUAGES: {
   { code: "ru", englishName: "Russian", nativeName: "Русский" },
   { code: "ar", englishName: "Arabic", nativeName: "العربية" },
   { code: "zh", englishName: "Chinese", nativeName: "中文" },
+  { code: "it", englishName: "Italian", nativeName: "Italiano" },
+  { code: "ko", englishName: "Korean", nativeName: "한국어" },
 ];
 
 const AVATAR_COLORS = [

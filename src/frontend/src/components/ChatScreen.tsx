@@ -15,6 +15,7 @@ import {
   Send,
   Trash2,
   X,
+  ZoomIn,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -43,6 +44,7 @@ interface PendingMessage {
   isVoice?: boolean;
   voiceBlobUrl?: string;
   voiceDuration?: number;
+  uploadProgress?: { loaded: number; total: number } | null;
 }
 
 type Reaction = {
@@ -211,6 +213,11 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [isPlayingBack, setIsPlayingBack] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
+  const [fullscreenMedia, setFullscreenMedia] = useState<{
+    type: "image" | "video";
+    src: string;
+  } | null>(null);
+  const videoCacheRef = useRef<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -715,7 +722,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     inputRef.current?.focus();
 
     const tempId = `pending-${Date.now()}-${Math.random()}`;
-    // Optimistic pending message shows local video preview immediately
+    // Optimistic pending message shows local video preview + progress ring
     const pendingMsg: PendingMessage = {
       id: tempId,
       content: `[video]${videoPreviewUrl}[/video]`,
@@ -723,19 +730,43 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       failed: false,
       timestamp: BigInt(Date.now()) * BigInt(1_000_000),
       replyToId: replyState?.message.id,
+      uploadProgress: { loaded: 0, total: file.size },
     };
 
     setReplyState(null);
     setPendingMessages((prev) => [...prev, pendingMsg]);
 
     try {
-      // Read file as base64 data URL
+      // Read file as base64 data URL, tracking progress
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
+        reader.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setPendingMessages((prev) =>
+              prev.map((m) =>
+                m.id === tempId
+                  ? {
+                      ...m,
+                      uploadProgress: { loaded: e.loaded, total: e.total },
+                    }
+                  : m,
+              ),
+            );
+          }
+        };
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+
+      // Mark as complete (full progress)
+      setPendingMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, uploadProgress: { loaded: file.size, total: file.size } }
+            : m,
+        ),
+      );
 
       await sendMessage.mutateAsync({
         content: `[video]${base64}[/video]`,
@@ -745,7 +776,9 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     } catch {
       setPendingMessages((prev) =>
         prev.map((m) =>
-          m.id === tempId ? { ...m, pending: false, failed: true } : m,
+          m.id === tempId
+            ? { ...m, pending: false, failed: true, uploadProgress: null }
+            : m,
         ),
       );
     }
@@ -1099,6 +1132,26 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  // ── Fullscreen Media Handler ─────────────────────────────────────────────────
+
+  const handleMediaTap = useCallback(
+    async (src: string, type: "image" | "video") => {
+      if (type === "image") {
+        setFullscreenMedia({ type: "image", src });
+        return;
+      }
+      // For video: check cache first
+      const cached = videoCacheRef.current.get(src);
+      if (cached) {
+        setFullscreenMedia({ type: "video", src: cached });
+        return;
+      }
+      // Show loading state immediately, then load
+      setFullscreenMedia({ type: "video", src });
+    },
+    [],
+  );
+
   const allMessages = activeChatData.messages || [];
 
   return (
@@ -1201,6 +1254,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
               replySource={replySource}
               onLongPress={(el) => openContextMenu(msg, isOwn, el)}
               onReactionToggle={(emoji) => toggleReaction(msg.id, emoji)}
+              onMediaTap={handleMediaTap}
             />
           );
         })}
@@ -1210,6 +1264,9 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
             key={pm.id}
             message={pm}
             onRetry={() => handleRetry(pm)}
+            onCancelUpload={() =>
+              setPendingMessages((prev) => prev.filter((m) => m.id !== pm.id))
+            }
             errorLabel={t("chat_error_retry")}
           />
         ))}
@@ -1849,6 +1906,17 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         />
       )}
 
+      {/* Fullscreen Media Viewer */}
+      {fullscreenMedia &&
+        ReactDOM.createPortal(
+          <FullscreenMediaViewer
+            media={fullscreenMedia}
+            onClose={() => setFullscreenMedia(null)}
+            videoCacheRef={videoCacheRef}
+          />,
+          document.body,
+        )}
+
       {/* Forward Chat Sheet */}
       <ForwardChatSheet
         open={!!forwardMessage}
@@ -2213,6 +2281,7 @@ interface MessageBubbleProps {
   replySource?: Message;
   onLongPress: (el: HTMLElement) => void;
   onReactionToggle: (emoji: string) => void;
+  onMediaTap: (src: string, type: "image" | "video") => void;
 }
 
 function MessageBubble({
@@ -2225,6 +2294,7 @@ function MessageBubble({
   replySource,
   onLongPress,
   onReactionToggle,
+  onMediaTap,
 }: MessageBubbleProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -2364,12 +2434,24 @@ function MessageBubble({
                     );
                     if (imgContentMatch) {
                       return (
-                        <div className="relative">
+                        <button
+                          type="button"
+                          className="relative cursor-pointer block"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onMediaTap(imgContentMatch[1], "image");
+                          }}
+                          aria-label="View image fullscreen"
+                        >
                           <img
                             src={imgContentMatch[1]}
                             alt="Attachment"
                             className="rounded-xl max-w-[220px] max-h-[280px] object-cover block"
                           />
+                          {/* Zoom hint overlay */}
+                          <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center opacity-70">
+                            <ZoomIn size={12} className="text-white" />
+                          </div>
                           <span
                             className={`absolute bottom-1.5 right-1.5 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1 ${
                               isOwn ? "text-white/90" : "text-white/90"
@@ -2380,7 +2462,7 @@ function MessageBubble({
                             )}
                             {time}
                           </span>
-                        </div>
+                        </button>
                       );
                     }
                     const videoContentMatch = displayContent.match(
@@ -2388,16 +2470,43 @@ function MessageBubble({
                     );
                     if (videoContentMatch) {
                       return (
-                        <div className="relative">
-                          {/* biome-ignore lint/a11y/useMediaCaption: user-generated video content, captions not available */}
+                        <button
+                          type="button"
+                          className="relative cursor-pointer block"
+                          style={{ minWidth: "160px", minHeight: "90px" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onMediaTap(videoContentMatch[1], "video");
+                          }}
+                          aria-label="View video fullscreen"
+                        >
+                          {/* Video thumbnail (no controls - tap to open fullscreen) */}
+                          {/* biome-ignore lint/a11y/useMediaCaption: muted thumbnail, no captions needed */}
                           <video
                             src={videoContentMatch[1]}
-                            controls
                             playsInline
                             preload="metadata"
-                            className="rounded-xl max-w-[220px] max-h-[280px] block bg-black"
+                            muted
+                            className="rounded-xl max-w-[220px] max-h-[280px] block bg-black pointer-events-none"
                             style={{ minWidth: "160px", minHeight: "90px" }}
                           />
+                          {/* Play button overlay */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div
+                              className="w-12 h-12 rounded-full flex items-center justify-center"
+                              style={{ background: "rgba(0,0,0,0.55)" }}
+                            >
+                              <svg
+                                width="18"
+                                height="20"
+                                viewBox="0 0 10 12"
+                                fill="white"
+                                aria-hidden="true"
+                              >
+                                <polygon points="2,1 9,6 2,11" />
+                              </svg>
+                            </div>
+                          </div>
                           <span
                             className={`absolute bottom-1.5 right-1.5 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1 ${
                               isOwn ? "text-white/90" : "text-white/90"
@@ -2408,7 +2517,7 @@ function MessageBubble({
                             )}
                             {time}
                           </span>
-                        </div>
+                        </button>
                       );
                     }
                     return (
@@ -2470,10 +2579,101 @@ function MessageBubble({
 interface PendingBubbleProps {
   message: PendingMessage;
   onRetry: () => void;
+  onCancelUpload: () => void;
   errorLabel: string;
 }
 
-function PendingBubble({ message, onRetry, errorLabel }: PendingBubbleProps) {
+function VideoUploadProgress({
+  progress,
+  total,
+  onCancel,
+}: {
+  progress: { loaded: number; total: number } | null | undefined;
+  total: number;
+  onCancel: () => void;
+}) {
+  const size = 52;
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const pct =
+    progress && progress.total > 0 ? progress.loaded / progress.total : 0;
+  const dashOffset = circumference * (1 - pct);
+
+  const fmtMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
+  const totalMB = fmtMB(total);
+  const loadedMB = progress ? fmtMB(progress.loaded) : "0.0";
+  const isProcessing = !progress || progress.loaded === 0;
+
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/50" />
+
+      {/* Progress label at top */}
+      <div className="absolute top-2 left-0 right-0 flex justify-center z-10">
+        <span className="text-white text-[10px] font-semibold bg-black/60 rounded-full px-2 py-0.5 leading-tight">
+          {isProcessing ? "Processing..." : `${loadedMB} MB / ${totalMB} MB`}
+        </span>
+      </div>
+
+      {/* Circular progress ring + cancel button */}
+      <div className="relative z-10 flex items-center justify-center">
+        {/* SVG Ring */}
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          className="-rotate-90"
+          aria-hidden="true"
+        >
+          {/* Track */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.2)"
+            strokeWidth={strokeWidth}
+          />
+          {/* Progress arc */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.9)"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            style={{ transition: "stroke-dashoffset 0.3s ease-out" }}
+          />
+        </svg>
+
+        {/* Cancel X button in center */}
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute inset-0 flex items-center justify-center rounded-full"
+          aria-label="Cancel upload"
+        >
+          <div className="w-8 h-8 rounded-full bg-black/70 flex items-center justify-center">
+            <X size={14} className="text-white" strokeWidth={2.5} />
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PendingBubble({
+  message,
+  onRetry,
+  onCancelUpload,
+  errorLabel,
+}: PendingBubbleProps) {
   if (message.isVoice && message.voiceBlobUrl) {
     return (
       <div className="flex justify-end mt-0.5">
@@ -2495,6 +2695,8 @@ function PendingBubble({ message, onRetry, errorLabel }: PendingBubbleProps) {
   const videoPreviewUrl = videoMatch ? videoMatch[1] : null;
 
   const isMedia = !!(previewUrl || videoPreviewUrl);
+  const isVideoUploading =
+    !!videoPreviewUrl && message.pending && !message.failed;
 
   return (
     <div className="flex justify-end mt-0.5">
@@ -2531,29 +2733,39 @@ function PendingBubble({ message, onRetry, errorLabel }: PendingBubbleProps) {
                 </span>
               </div>
             ) : videoPreviewUrl ? (
-              <div className="relative">
+              <div
+                className="relative"
+                style={{ minWidth: "160px", minHeight: "90px" }}
+              >
                 {/* biome-ignore lint/a11y/useMediaCaption: user-generated video content, captions not available */}
                 <video
                   src={videoPreviewUrl}
-                  controls
                   playsInline
                   preload="metadata"
-                  className="rounded-2xl max-w-[220px] max-h-[280px] block bg-black"
+                  muted
+                  className="rounded-2xl max-w-[220px] max-h-[280px] block bg-black w-full h-full"
                   style={{ minWidth: "160px", minHeight: "90px" }}
                 />
-                <span className="absolute bottom-2 right-2 text-white/90 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1">
-                  {message.failed ? (
+                {message.failed ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl">
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="text-red-300 text-[10px] font-medium"
+                      className="text-red-300 text-[10px] font-medium bg-black/60 rounded-full px-2 py-0.5"
                     >
                       {errorLabel}
                     </button>
-                  ) : (
-                    <Loader2 size={11} className="animate-spin text-white/80" />
-                  )}
-                </span>
+                  </div>
+                ) : isVideoUploading ? (
+                  <VideoUploadProgress
+                    progress={message.uploadProgress}
+                    total={
+                      message.uploadProgress?.total ??
+                      videoPreviewUrl.length * 0.75
+                    }
+                    onCancel={onCancelUpload}
+                  />
+                ) : null}
               </div>
             ) : (
               <>
@@ -2579,6 +2791,143 @@ function PendingBubble({ message, onRetry, errorLabel }: PendingBubbleProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Fullscreen Media Viewer ────────────────────────────────────────────────────
+
+interface FullscreenMediaViewerProps {
+  media: { type: "image" | "video"; src: string };
+  onClose: () => void;
+  videoCacheRef: React.RefObject<Map<string, string>>;
+}
+
+function FullscreenMediaViewer({
+  media,
+  onClose,
+  videoCacheRef,
+}: FullscreenMediaViewerProps) {
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const touchStartYRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (media.type !== "video") return;
+
+    const cache = videoCacheRef.current;
+    if (!cache) return;
+
+    // Check cache first
+    const cached = cache.get(media.src);
+    if (cached) {
+      setVideoSrc(cached);
+      return;
+    }
+
+    // If it's already a blob URL or data URL, use directly
+    if (media.src.startsWith("blob:") || media.src.startsWith("data:")) {
+      setVideoSrc(media.src);
+      cache.set(media.src, media.src);
+      return;
+    }
+
+    // Fetch and cache as blob
+    setIsLoadingVideo(true);
+    fetch(media.src)
+      .then((r) => r.blob())
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob);
+        cache.set(media.src, blobUrl);
+        setVideoSrc(blobUrl);
+        setIsLoadingVideo(false);
+      })
+      .catch(() => {
+        // Fallback: use original src directly
+        setVideoSrc(media.src);
+        setIsLoadingVideo(false);
+      });
+  }, [media.src, media.type, videoCacheRef]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dy = e.changedTouches[0].clientY - touchStartYRef.current;
+    if (dy > 80) {
+      onClose();
+    }
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.96)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onClose}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Close button */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white active:bg-white/20 transition-colors"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
+        aria-label="Close"
+      >
+        <X size={20} />
+      </button>
+
+      {media.type === "image" ? (
+        <motion.div
+          className="flex items-center justify-center w-full h-full px-2"
+          initial={{ scale: 0.92 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <img
+            src={media.src}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain rounded-lg select-none"
+            style={{ maxHeight: "90vh", maxWidth: "95vw" }}
+            draggable={false}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          className="flex items-center justify-center w-full h-full"
+          initial={{ scale: 0.92 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {isLoadingVideo ? (
+            <div className="flex items-center justify-center">
+              <div
+                className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white animate-spin"
+                aria-label="Loading video"
+              />
+            </div>
+          ) : videoSrc ? (
+            // biome-ignore lint/a11y/useMediaCaption: user-generated video content, captions not available
+            <video
+              src={videoSrc}
+              autoPlay
+              controls
+              playsInline
+              preload="auto"
+              className="max-w-full max-h-full rounded-lg"
+              style={{ maxHeight: "90vh", maxWidth: "95vw" }}
+            />
+          ) : null}
+        </motion.div>
+      )}
+    </motion.div>
   );
 }
 
