@@ -87,10 +87,6 @@ export default function NewChatSheet({
       toast.error(t("new_group_error_name"));
       return;
     }
-    if (selectedUsers.length === 0) {
-      toast.error(t("new_group_error_members"));
-      return;
-    }
     try {
       const chat = await createGroup.mutateAsync({
         name: groupName.trim(),
@@ -152,11 +148,7 @@ export default function NewChatSheet({
                   data-ocid="group.create_button"
                   size="sm"
                   onClick={handleCreateGroup}
-                  disabled={
-                    createGroup.isPending ||
-                    !groupName.trim() ||
-                    selectedUsers.length === 0
-                  }
+                  disabled={createGroup.isPending || !groupName.trim()}
                   className="h-7 px-3 text-xs rounded-full bg-primary text-primary-foreground"
                 >
                   {createGroup.isPending ? (

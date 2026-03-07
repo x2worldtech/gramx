@@ -190,11 +190,19 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     file: File;
     previewUrl: string;
   } | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<{
+    file: File;
+    previewUrl: string;
+  } | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState<number>(-1);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [waveformTick, setWaveformTick] = useState(0);
+  const [waveformAmplitudes, setWaveformAmplitudes] = useState<number[]>(() =>
+    Array.from({ length: RECORDING_WAVEFORM_BARS.length }, () => 0),
+  );
   const [showLockHint, setShowLockHint] = useState(false);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [isPlayingBack, setIsPlayingBack] = useState(false);
@@ -205,10 +213,13 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   const documentInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const cameraRightInputRef = useRef<HTMLInputElement>(null);
+  const cameraVideoInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const waveformTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const recordingStartRef = useRef<number>(0);
   const pausedDurationRef = useRef<number>(0);
   const pauseStartRef = useRef<number>(0);
@@ -450,6 +461,10 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   // ── Send ──────────────────────────────────────────────────────────────────────
 
   const handleSend = async () => {
+    if (selectedVideo) {
+      await handleSendWithVideo();
+      return;
+    }
     if (selectedImage) {
       await handleSendWithImage();
       return;
@@ -522,18 +537,95 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Escape") {
+      setMentionQuery(null);
+      setMentionStart(-1);
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
+  const handleMessageTextChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+  ) => {
+    const val = e.target.value;
+    setMessageText(val);
+
+    if (!isGroup) {
+      setMentionQuery(null);
+      setMentionStart(-1);
+      return;
+    }
+
+    const cursor = e.target.selectionStart ?? val.length;
+    // Find last @ before cursor with no space between @ and cursor
+    const textBeforeCursor = val.slice(0, cursor);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (atMatch) {
+      const atIdx = cursor - atMatch[0].length;
+      setMentionStart(atIdx);
+      setMentionQuery(atMatch[1]);
+    } else {
+      setMentionQuery(null);
+      setMentionStart(-1);
+    }
+  };
+
+  const insertMention = (username: string) => {
+    if (!inputRef.current) return;
+    const val = messageText;
+    const before = val.slice(0, mentionStart);
+    const after = val.slice(inputRef.current.selectionStart ?? val.length);
+    const newVal = `${before}@${username} ${after}`;
+    setMessageText(newVal);
+    setMentionQuery(null);
+    setMentionStart(-1);
+    // Restore focus and set cursor after mention
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        const pos = before.length + username.length + 2; // @username + space
+        inputRef.current.setSelectionRange(pos, pos);
+      }
+    }, 0);
+  };
+
+  const mentionCandidates = (() => {
+    if (!isGroup || mentionQuery === null) return [];
+    const participants = activeChatData.participants ?? [];
+    return participants
+      .filter(
+        (p) =>
+          !myUser || p.principal.toString() !== myUser.principal.toString(),
+      )
+      .filter((p) => {
+        if (mentionQuery === "") return true;
+        const q = mentionQuery.toLowerCase();
+        return (
+          p.username.toLowerCase().startsWith(q) ||
+          p.name.toLowerCase().startsWith(q)
+        );
+      })
+      .slice(0, 5);
+  })();
+
   // ── Image / File Handlers ────────────────────────────────────────────────────
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type.startsWith("image/")) {
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Video is too large. Max 100MB.");
+      e.target.value = "";
+      return;
+    }
+    if (file.type.startsWith("video/")) {
+      const previewUrl = URL.createObjectURL(file);
+      setSelectedVideo({ file, previewUrl });
+    } else if (file.type.startsWith("image/")) {
       const previewUrl = URL.createObjectURL(file);
       setSelectedImage({ file, previewUrl });
     } else {
@@ -598,6 +690,59 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     }
   };
 
+  const handleRemoveVideo = () => {
+    if (selectedVideo) {
+      URL.revokeObjectURL(selectedVideo.previewUrl);
+      setSelectedVideo(null);
+    }
+  };
+
+  const handleSendWithVideo = async () => {
+    if (!selectedVideo) return;
+
+    const file = selectedVideo.file;
+    const videoPreviewUrl = selectedVideo.previewUrl;
+    handleRemoveVideo();
+    setMessageText("");
+    inputRef.current?.focus();
+
+    const tempId = `pending-${Date.now()}-${Math.random()}`;
+    // Optimistic pending message shows local video preview immediately
+    const pendingMsg: PendingMessage = {
+      id: tempId,
+      content: `[video]${videoPreviewUrl}[/video]`,
+      pending: true,
+      failed: false,
+      timestamp: BigInt(Date.now()) * BigInt(1_000_000),
+      replyToId: replyState?.message.id,
+    };
+
+    setReplyState(null);
+    setPendingMessages((prev) => [...prev, pendingMsg]);
+
+    try {
+      // Read file as base64 data URL
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      await sendMessage.mutateAsync({
+        content: `[video]${base64}[/video]`,
+        chatId: chat.id,
+      });
+      setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } catch {
+      setPendingMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, pending: false, failed: true } : m,
+        ),
+      );
+    }
+  };
+
   // ── Voice Record Handlers ────────────────────────────────────────────────────
 
   const stopTimers = () => {
@@ -605,10 +750,30 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
-    if (waveformTimerRef.current) {
-      clearInterval(waveformTimerRef.current);
-      waveformTimerRef.current = null;
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
     }
+  };
+
+  const startWaveformLoop = () => {
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    const numBars = RECORDING_WAVEFORM_BARS.length;
+
+    const tick = () => {
+      analyser.getByteFrequencyData(dataArray);
+      // Map frequency bins to bar amplitudes
+      const amplitudes = Array.from({ length: numBars }, (_, i) => {
+        const binIndex = Math.floor((i / numBars) * (bufferLength * 0.6));
+        return dataArray[binIndex] / 255; // 0..1
+      });
+      setWaveformAmplitudes(amplitudes);
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
   };
 
   const startTimers = () => {
@@ -621,16 +786,34 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         ),
       );
     }, 1000);
-    waveformTimerRef.current = setInterval(() => {
-      setWaveformTick((t) => t + 1);
-    }, 120);
+    startWaveformLoop();
   };
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
+
+      // Set up AudioContext + AnalyserNode for real-time waveform
+      const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.75;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      // Pick a supported MIME type that actually records audio
+      const mimeType =
+        [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/ogg;codecs=opus",
+          "audio/mp4",
+        ].find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       audioChunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
@@ -648,6 +831,9 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       setIsRecordingLocked(false);
       setIsRecordingPaused(false);
       setRecordingDuration(0);
+      setWaveformAmplitudes(
+        Array.from({ length: RECORDING_WAVEFORM_BARS.length }, () => 0),
+      );
       setShowLockHint(true);
       startTimers();
     } catch {
@@ -703,13 +889,19 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
 
   const sendLockedRecording = () => {
     stopTimers();
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+      analyserRef.current = null;
+    }
     const recorder = mediaRecorderRef.current;
     if (!recorder) return;
 
     const duration = recordingDuration;
+    const mimeType = recorder.mimeType || "audio/webm";
 
     recorder.onstop = () => {
-      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
       const blobUrl = URL.createObjectURL(blob);
       const tempId = `pending-voice-${Date.now()}-${Math.random()}`;
       const pendingVoice: PendingMessage = {
@@ -762,6 +954,14 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     setShowLockHint(false);
     micLockedRef.current = false;
     setIsPlayingBack(false);
+    setWaveformAmplitudes(
+      Array.from({ length: RECORDING_WAVEFORM_BARS.length }, () => 0),
+    );
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+      analyserRef.current = null;
+    }
     if (playbackUrl) {
       URL.revokeObjectURL(playbackUrl);
       setPlaybackUrl(null);
@@ -777,6 +977,14 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     if (micLockedRef.current) return;
     stopTimers();
     setShowLockHint(false);
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+      analyserRef.current = null;
+    }
+    setWaveformAmplitudes(
+      Array.from({ length: RECORDING_WAVEFORM_BARS.length }, () => 0),
+    );
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state === "inactive") {
       setIsRecording(false);
@@ -786,9 +994,10 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
 
     const duration = recordingDuration;
     const stream = mediaStreamRef.current;
+    const mimeType = recorder.mimeType || "audio/webm";
 
     recorder.onstop = () => {
-      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
       const blobUrl = URL.createObjectURL(blob);
       const tempId = `pending-voice-${Date.now()}-${Math.random()}`;
       const pendingVoice: PendingMessage = {
@@ -1039,7 +1248,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         className="hidden"
         onChange={handleFileSelected}
       />
@@ -1061,6 +1270,14 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         ref={cameraRightInputRef}
         type="file"
         accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
+      <input
+        ref={cameraVideoInputRef}
+        type="file"
+        accept="video/*"
         capture="environment"
         className="hidden"
         onChange={handleFileSelected}
@@ -1091,6 +1308,50 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
               </button>
             </div>
             <p className="text-xs text-muted-foreground">Photo ready to send</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Video preview above input */}
+      <AnimatePresence>
+        {selectedVideo && (
+          <motion.div
+            className="flex-shrink-0 bg-background border-t border-border/60 px-3 pt-2 pb-1 flex items-center gap-2"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-border/60 flex-shrink-0 bg-black">
+              {/* biome-ignore lint/a11y/useMediaCaption: thumbnail preview, no captions needed */}
+              <video
+                src={selectedVideo.previewUrl}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-black/60 flex items-center justify-center">
+                  <svg
+                    width="10"
+                    height="12"
+                    viewBox="0 0 10 12"
+                    fill="white"
+                    aria-hidden="true"
+                  >
+                    <polygon points="2,1 9,6 2,11" />
+                  </svg>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoveVideo}
+                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center"
+              >
+                <X size={11} className="text-white" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">Video ready to send</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1185,14 +1446,10 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
                       barHeight = bar.h * 0.45;
                       barColor = "rgba(255,255,255,0.25)";
                     } else {
-                      // Live animated recording
-                      const wave =
-                        0.5 + 0.5 * Math.sin(waveformTick * 0.4 + barPos * 0.5);
-                      barHeight = Math.max(
-                        4,
-                        Math.min(36, bar.h * (0.5 + wave)),
-                      );
-                      // gradient from blue to white based on height
+                      // Live recording: use real amplitude from AnalyserNode
+                      const amplitude = waveformAmplitudes[barPos] ?? 0;
+                      // Minimum height 4px, scale up to 36px based on amplitude
+                      barHeight = Math.max(4, Math.min(36, 4 + amplitude * 32));
                       const intensity = barHeight / 36;
                       barColor =
                         intensity > 0.65
@@ -1211,7 +1468,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
                           maxWidth: "6px",
                           transition: isRecordingPaused
                             ? "height 0.3s ease-out, background 0.2s"
-                            : "height 0.08s ease-out",
+                            : "height 0.05s ease-out",
                         }}
                       />
                     );
@@ -1282,161 +1539,198 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
 
       {/* Input bar */}
       <div
-        className="ios-bottom-bar safe-bottom flex-shrink-0 px-3 py-2 z-10"
+        className="flex-shrink-0 relative"
         style={{ display: isRecordingLocked ? "none" : undefined }}
       >
-        <div className="flex items-end gap-1.5">
-          {/* Plus button */}
-          <motion.button
-            data-ocid="chat.plus_button"
-            type="button"
-            onClick={() => setShowPlusMenu(true)}
-            className="w-9 h-9 rounded-full bg-muted border border-border/60 flex items-center justify-center text-muted-foreground active:opacity-60 transition-opacity flex-shrink-0 mb-0.5"
-            whileTap={{ scale: 0.9 }}
-          >
-            <Plus size={18} strokeWidth={2.5} />
-          </motion.button>
+        {/* @Mention Dropdown */}
+        <AnimatePresence>
+          {isGroup && mentionQuery !== null && mentionCandidates.length > 0 && (
+            <motion.div
+              data-ocid="chat.mention_dropdown"
+              className="absolute bottom-full left-3 right-3 mb-1 z-30 rounded-2xl overflow-hidden shadow-2xl"
+              style={{
+                background: "#1c1c1e",
+                border: "1px solid rgba(59,130,246,0.18)",
+              }}
+              initial={{ opacity: 0, y: 8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.97 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            >
+              <div className="max-h-[220px] overflow-y-auto overscroll-contain">
+                {mentionCandidates.map((p, idx) => (
+                  <MentionRow
+                    key={p.principal.toString()}
+                    user={p}
+                    isLast={idx === mentionCandidates.length - 1}
+                    onSelect={() => insertMention(p.username)}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className="ios-bottom-bar safe-bottom px-3 py-2 z-10">
+          <div className="flex items-end gap-1.5">
+            {/* Plus button */}
+            <motion.button
+              data-ocid="chat.plus_button"
+              type="button"
+              onClick={() => setShowPlusMenu(true)}
+              className="w-9 h-9 rounded-full bg-muted border border-border/60 flex items-center justify-center text-muted-foreground active:opacity-60 transition-opacity flex-shrink-0 mb-0.5"
+              whileTap={{ scale: 0.9 }}
+            >
+              <Plus size={18} strokeWidth={2.5} />
+            </motion.button>
 
-          {/* Text input */}
-          <div className="flex-1 bg-muted rounded-2xl px-4 py-2 flex items-center min-h-[40px] border border-border/60">
-            <textarea
-              ref={inputRef}
-              data-ocid="chat.input"
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t("chat_message_placeholder")}
-              rows={1}
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none leading-5 max-h-24 overflow-y-auto"
-              style={{ height: "auto" }}
-            />
-          </div>
+            {/* Text input */}
+            <div className="flex-1 bg-muted rounded-2xl px-4 py-2 flex items-center min-h-[40px] border border-border/60">
+              <textarea
+                ref={inputRef}
+                data-ocid="chat.input"
+                value={messageText}
+                onChange={handleMessageTextChange}
+                onKeyDown={handleKeyDown}
+                onBlur={() => {
+                  // Small delay so mention row mousedown fires first
+                  setTimeout(() => {
+                    setMentionQuery(null);
+                    setMentionStart(-1);
+                  }, 150);
+                }}
+                placeholder={t("chat_message_placeholder")}
+                rows={1}
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none leading-5 max-h-24 overflow-y-auto"
+                style={{ height: "auto" }}
+              />
+            </div>
 
-          {/* Right side: send OR camera+mic */}
-          <AnimatePresence mode="wait">
-            {messageText.trim() || selectedImage ? (
-              <motion.button
-                key="send"
-                data-ocid="chat.send_button"
-                onClick={handleSend}
-                className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0 mb-0.5"
-                initial={{ scale: 0.7, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.7, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Send size={17} strokeWidth={2} />
-              </motion.button>
-            ) : (
-              <motion.div
-                key="media-btns"
-                className="flex items-center gap-1 flex-shrink-0 mb-0.5"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {/* Camera button (right) */}
+            {/* Right side: send OR camera+mic */}
+            <AnimatePresence mode="wait">
+              {messageText.trim() || selectedImage || selectedVideo ? (
                 <motion.button
-                  data-ocid="chat.camera_button"
-                  type="button"
-                  onClick={() => cameraRightInputRef.current?.click()}
-                  className="w-9 h-9 rounded-full bg-muted border border-border/60 flex items-center justify-center text-muted-foreground active:opacity-60 transition-opacity"
+                  key="send"
+                  data-ocid="chat.send_button"
+                  onClick={handleSend}
+                  className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0 mb-0.5"
+                  initial={{ scale: 0.7, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.7, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <Camera size={17} strokeWidth={2} />
+                  <Send size={17} strokeWidth={2} />
                 </motion.button>
-
-                {/* Mic button + lock hint */}
-                <div className="relative flex-shrink-0">
-                  {/* Lock hint indicator */}
-                  <AnimatePresence>
-                    {showLockHint && isRecording && !isRecordingLocked && (
-                      <motion.div
-                        className="absolute -top-14 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none"
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 6 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div className="bg-[#1c1c1e] rounded-full px-2.5 py-1.5 flex flex-col items-center gap-0.5 shadow-lg">
-                          <Lock size={12} className="text-white/80" />
-                          <svg
-                            width="10"
-                            height="12"
-                            viewBox="0 0 10 12"
-                            fill="none"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M5 10L5 2M2 5L5 2L8 5"
-                              stroke="white"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              opacity="0.7"
-                            />
-                          </svg>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              ) : (
+                <motion.div
+                  key="media-btns"
+                  className="flex items-center gap-1 flex-shrink-0 mb-0.5"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {/* Camera button (right) */}
                   <motion.button
-                    data-ocid="chat.mic_button"
+                    data-ocid="chat.camera_button"
                     type="button"
-                    onTouchStart={handleMicTouchStart}
-                    onTouchMove={handleMicTouchMove}
-                    onTouchEnd={handleMicTouchEnd}
-                    onMouseDown={handleMicMouseDown}
-                    onMouseMove={handleMicMouseMove}
-                    onMouseUp={handleMicMouseUp}
-                    onMouseLeave={() => {
-                      if (isRecording && !micLockedRef.current) {
-                        stopRecording();
-                      }
-                    }}
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                      isRecording
-                        ? "bg-red-500 text-white scale-110"
-                        : "bg-muted border border-border/60 text-muted-foreground"
-                    }`}
-                    animate={
-                      isRecording ? { scale: [1.1, 1.15, 1.1] } : { scale: 1 }
-                    }
-                    transition={
-                      isRecording
-                        ? { repeat: Number.POSITIVE_INFINITY, duration: 0.8 }
-                        : {}
-                    }
+                    onClick={() => cameraRightInputRef.current?.click()}
+                    className="w-9 h-9 rounded-full bg-muted border border-border/60 flex items-center justify-center text-muted-foreground active:opacity-60 transition-opacity"
+                    whileTap={{ scale: 0.9 }}
                   >
-                    <Mic size={17} strokeWidth={2} />
+                    <Camera size={17} strokeWidth={2} />
                   </motion.button>
-                </div>
+
+                  {/* Mic button + lock hint */}
+                  <div className="relative flex-shrink-0">
+                    {/* Lock hint indicator */}
+                    <AnimatePresence>
+                      {showLockHint && isRecording && !isRecordingLocked && (
+                        <motion.div
+                          className="absolute -top-14 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 6 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div className="bg-[#1c1c1e] rounded-full px-2.5 py-1.5 flex flex-col items-center gap-0.5 shadow-lg">
+                            <Lock size={12} className="text-white/80" />
+                            <svg
+                              width="10"
+                              height="12"
+                              viewBox="0 0 10 12"
+                              fill="none"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M5 10L5 2M2 5L5 2L8 5"
+                                stroke="white"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                opacity="0.7"
+                              />
+                            </svg>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <motion.button
+                      data-ocid="chat.mic_button"
+                      type="button"
+                      onTouchStart={handleMicTouchStart}
+                      onTouchMove={handleMicTouchMove}
+                      onTouchEnd={handleMicTouchEnd}
+                      onMouseDown={handleMicMouseDown}
+                      onMouseMove={handleMicMouseMove}
+                      onMouseUp={handleMicMouseUp}
+                      onMouseLeave={() => {
+                        if (isRecording && !micLockedRef.current) {
+                          stopRecording();
+                        }
+                      }}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                        isRecording
+                          ? "bg-red-500 text-white scale-110"
+                          : "bg-muted border border-border/60 text-muted-foreground"
+                      }`}
+                      animate={
+                        isRecording ? { scale: [1.1, 1.15, 1.1] } : { scale: 1 }
+                      }
+                      transition={
+                        isRecording
+                          ? { repeat: Number.POSITIVE_INFINITY, duration: 0.8 }
+                          : {}
+                      }
+                    >
+                      <Mic size={17} strokeWidth={2} />
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Recording indicator (non-locked) */}
+          <AnimatePresence>
+            {isRecording && !isRecordingLocked && (
+              <motion.div
+                className="flex items-center gap-2 px-1 pt-1"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xs text-red-400 font-medium">
+                  {formatDuration(recordingDuration)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  ↑ Slide up to lock
+                </span>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-
-        {/* Recording indicator (non-locked) */}
-        <AnimatePresence>
-          {isRecording && !isRecordingLocked && (
-            <motion.div
-              className="flex items-center gap-2 px-1 pt-1"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-xs text-red-400 font-medium">
-                {formatDuration(recordingDuration)}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                ↑ Slide up to lock
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Plus menu overlay */}
@@ -1483,6 +1777,31 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
                     <FileText size={18} className="text-purple-400" />
                   </div>
                   <span className="text-white text-base">Document</span>
+                </button>
+
+                {/* Video Camera */}
+                <button
+                  data-ocid="chat.video_item"
+                  type="button"
+                  onClick={() => cameraVideoInputRef.current?.click()}
+                  className="w-full flex items-center gap-3 px-4 py-4 active:bg-white/10 transition-colors border-b border-white/10"
+                >
+                  <div className="w-9 h-9 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-red-400"
+                      aria-hidden="true"
+                    >
+                      <path d="M23 7l-7 5 7 5V7z" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" />
+                    </svg>
+                  </div>
+                  <span className="text-white text-base">Video</span>
                 </button>
 
                 {/* Camera */}
@@ -1638,7 +1957,7 @@ function MessageContextMenu({
             style={{ display: "inline-block", maxWidth: "100%" }}
           >
             <div className="px-3 py-2">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-all">
                 {contextMenu.message.content}
               </p>
             </div>
@@ -1815,6 +2134,65 @@ function ContextMenuItem({
   );
 }
 
+// ── Mention Row ──────────────────────────────────────────────────────────────
+
+function MentionRow({
+  user,
+  isLast,
+  onSelect,
+}: {
+  user: User;
+  isLast: boolean;
+  onSelect: () => void;
+}) {
+  const initials = (user.name || user.username || "?")
+    .slice(0, 2)
+    .toUpperCase();
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        // Use mousedown so it fires before textarea blur
+        e.preventDefault();
+        onSelect();
+      }}
+      onTouchStart={(e) => {
+        e.preventDefault();
+        onSelect();
+      }}
+      className={`w-full flex items-center gap-3 px-4 py-3 active:bg-white/10 transition-colors text-left ${!isLast ? "border-b border-white/10" : ""}`}
+    >
+      <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center flex-shrink-0">
+        <span className="text-xs font-semibold text-primary">{initials}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white truncate">{user.name}</p>
+        <p className="text-xs text-blue-400/80 truncate">@{user.username}</p>
+      </div>
+    </button>
+  );
+}
+
+// ── Mention Highlight Renderer ────────────────────────────────────────────────
+
+function renderWithMentions(text: string): React.ReactNode {
+  const parts = text.split(/(@\w+)/g);
+  if (parts.length <= 1) return text;
+  return parts.map((part, i) => {
+    if (/^@\w+$/.test(part)) {
+      return (
+        <span
+          key={`mention-${i}-${part}`}
+          className="text-blue-400 font-medium"
+        >
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 // ── Message Bubble ────────────────────────────────────────────────────────────
 
 interface MessageBubbleProps {
@@ -1902,7 +2280,7 @@ function MessageBubble({
       )}
 
       <div
-        className={`max-w-[75%] flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+        className={`max-w-[75%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
       >
         {showSender && !sameAsPrev && (
           <span className="text-xs font-semibold text-primary mb-1 ml-1">
@@ -1912,7 +2290,9 @@ function MessageBubble({
 
         {(() => {
           const isImageMsg =
-            !isDeleted && displayContent.match(/^\[img\]([\s\S]+)\[\/img\]$/);
+            !isDeleted &&
+            (displayContent.match(/^\[img\]([\s\S]+)\[\/img\]$/) ||
+              displayContent.match(/^\[video\]([\s\S]+)\[\/video\]$/));
           return (
             <div
               ref={bubbleRef}
@@ -1995,15 +2375,44 @@ function MessageBubble({
                         </div>
                       );
                     }
+                    const videoContentMatch = displayContent.match(
+                      /^\[video\]([\s\S]+)\[\/video\]$/,
+                    );
+                    if (videoContentMatch) {
+                      return (
+                        <div className="relative">
+                          {/* biome-ignore lint/a11y/useMediaCaption: user-generated video content, captions not available */}
+                          <video
+                            src={videoContentMatch[1]}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="rounded-xl max-w-[220px] max-h-[280px] block bg-black"
+                            style={{ minWidth: "160px", minHeight: "90px" }}
+                          />
+                          <span
+                            className={`absolute bottom-1.5 right-1.5 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1 ${
+                              isOwn ? "text-white/90" : "text-white/90"
+                            }`}
+                          >
+                            {isEdited && (
+                              <span className="opacity-80 italic">edited</span>
+                            )}
+                            {time}
+                          </span>
+                        </div>
+                      );
+                    }
                     return (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-10">
-                        {displayContent}
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-10">
+                        {renderWithMentions(displayContent)}
                       </p>
                     );
                   })()
                 )}
 
                 {!displayContent.match(/^\[img\]([\s\S]+)\[\/img\]$/) &&
+                  !displayContent.match(/^\[video\]([\s\S]+)\[\/video\]$/) &&
                   !isDeleted && (
                     <span
                       className={`msg-time absolute bottom-2 right-2 flex items-center gap-1 ${
@@ -2074,13 +2483,18 @@ function PendingBubble({ message, onRetry, errorLabel }: PendingBubbleProps) {
   const imgMatch = message.content.match(/^\[img\]([\s\S]+)\[\/img\]$/);
   const previewUrl = imgMatch ? imgMatch[1] : null;
 
+  const videoMatch = message.content.match(/^\[video\]([\s\S]+)\[\/video\]$/);
+  const videoPreviewUrl = videoMatch ? videoMatch[1] : null;
+
+  const isMedia = !!(previewUrl || videoPreviewUrl);
+
   return (
     <div className="flex justify-end mt-0.5">
       <div className="max-w-[75%] flex flex-col items-end">
         <div
-          className={`bubble-out opacity-80 ${previewUrl ? "!p-0 overflow-hidden" : ""}`}
+          className={`bubble-out opacity-80 ${isMedia ? "!p-0 overflow-hidden" : ""}`}
         >
-          <div className={previewUrl ? "relative" : "px-3 py-2 relative"}>
+          <div className={isMedia ? "relative" : "px-3 py-2 relative"}>
             {message.forwardedFrom && (
               <div className="flex items-center gap-1 mb-1 text-white/70 px-3 pt-2">
                 <Forward size={12} />
@@ -2108,9 +2522,34 @@ function PendingBubble({ message, onRetry, errorLabel }: PendingBubbleProps) {
                   )}
                 </span>
               </div>
+            ) : videoPreviewUrl ? (
+              <div className="relative">
+                {/* biome-ignore lint/a11y/useMediaCaption: user-generated video content, captions not available */}
+                <video
+                  src={videoPreviewUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="rounded-2xl max-w-[220px] max-h-[280px] block bg-black"
+                  style={{ minWidth: "160px", minHeight: "90px" }}
+                />
+                <span className="absolute bottom-2 right-2 text-white/90 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1">
+                  {message.failed ? (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      className="text-red-300 text-[10px] font-medium"
+                    >
+                      {errorLabel}
+                    </button>
+                  ) : (
+                    <Loader2 size={11} className="animate-spin text-white/80" />
+                  )}
+                </span>
+              </div>
             ) : (
               <>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-14">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-14">
                   {message.content}
                 </p>
                 <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">

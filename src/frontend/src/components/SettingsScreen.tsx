@@ -54,6 +54,8 @@ const LANGUAGES: {
   { code: "en", englishName: "English", nativeName: "English" },
   { code: "de", englishName: "German", nativeName: "Deutsch" },
   { code: "es", englishName: "Spanish", nativeName: "Español" },
+  { code: "fr", englishName: "French", nativeName: "Français" },
+  { code: "ru", englishName: "Russian", nativeName: "Русский" },
   { code: "ar", englishName: "Arabic", nativeName: "العربية" },
   { code: "zh", englishName: "Chinese", nativeName: "中文" },
 ];

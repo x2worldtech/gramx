@@ -13,27 +13,41 @@ export function useMyUser() {
   return useQuery<User | null>({
     queryKey: ["myUser", principalId],
     queryFn: async () => {
-      if (!actor) return undefined as unknown as null;
+      if (!actor) throw new Error("Actor not ready");
       try {
-        // getCallerUserProfile returns null if not registered (no role required)
-        const profile = await actor.getCallerUserProfile();
-        if (profile === null || profile === undefined) return null;
-        // Build a User object from profile + identity principal
-        return {
-          principal: identity!.getPrincipal(),
-          name: profile.name,
-          username: profile.username,
-        } as User;
-      } catch {
-        // Network error or not registered → treat as null (not registered)
-        return null;
+        // getMyUser returns the full User object, throws if not registered
+        const user = await actor.getMyUser();
+        return user ?? null;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // If the error says "not registered" → user needs to register
+        if (
+          msg.toLowerCase().includes("not registered") ||
+          msg.toLowerCase().includes("unauthorized") ||
+          msg.toLowerCase().includes("does not exist")
+        ) {
+          return null;
+        }
+        // Transient network errors → rethrow so React Query retries
+        throw err;
       }
     },
     enabled: !!actor && principalId !== "anonymous",
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: (failureCount, error) => {
+      const msg = error instanceof Error ? error.message : String(error);
+      // Don't retry for "not registered" errors
+      if (
+        msg.toLowerCase().includes("not registered") ||
+        msg.toLowerCase().includes("unauthorized") ||
+        msg.toLowerCase().includes("does not exist")
+      ) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 }
 
