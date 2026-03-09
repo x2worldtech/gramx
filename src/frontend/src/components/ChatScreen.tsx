@@ -948,7 +948,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       const pendingVoice: PendingMessage = {
         id: tempId,
         content: "[Voice Message]",
-        pending: false,
+        pending: true,
         failed: false,
         timestamp: BigInt(Date.now()) * BigInt(1_000_000),
         isVoice: true,
@@ -956,6 +956,26 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         voiceDuration: duration,
       };
       setPendingMessages((prev) => [...prev, pendingVoice]);
+
+      // Convert blob to base64 and send to backend
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        const content = `[voice]${base64}[/voice]`;
+        try {
+          await sendMessage.mutateAsync({ content, chatId: chat.id });
+          setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+        } catch {
+          setPendingMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId ? { ...m, pending: false, failed: true } : m,
+            ),
+          );
+        }
+        URL.revokeObjectURL(blobUrl);
+      };
+      reader.readAsDataURL(blob);
+
       if (mediaStreamRef.current) {
         for (const track of mediaStreamRef.current.getTracks()) track.stop();
         mediaStreamRef.current = null;
@@ -1044,7 +1064,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       const pendingVoice: PendingMessage = {
         id: tempId,
         content: "[Voice Message]",
-        pending: false,
+        pending: true,
         failed: false,
         timestamp: BigInt(Date.now()) * BigInt(1_000_000),
         isVoice: true,
@@ -1052,6 +1072,26 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         voiceDuration: duration,
       };
       setPendingMessages((prev) => [...prev, pendingVoice]);
+
+      // Convert blob to base64 and send to backend
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        const content = `[voice]${base64}[/voice]`;
+        try {
+          await sendMessage.mutateAsync({ content, chatId: chat.id });
+          setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+        } catch {
+          setPendingMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId ? { ...m, pending: false, failed: true } : m,
+            ),
+          );
+        }
+        URL.revokeObjectURL(blobUrl);
+      };
+      reader.readAsDataURL(blob);
+
       if (stream) {
         for (const track of stream.getTracks()) track.stop();
         mediaStreamRef.current = null;
@@ -1897,12 +1937,13 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         )}
       </AnimatePresence>
 
-      {/* Group Info Sheet */}
+      {/* Group Info Screen */}
       {isGroup && (
         <GroupInfoSheet
           open={groupInfoOpen}
           onClose={() => setGroupInfoOpen(false)}
           chat={activeChatData}
+          myUser={myUser}
         />
       )}
 
@@ -2370,7 +2411,8 @@ function MessageBubble({
           const isImageMsg =
             !isDeleted &&
             (displayContent.match(/^\[img\]([\s\S]+)\[\/img\]$/) ||
-              displayContent.match(/^\[video\]([\s\S]+)\[\/video\]$/));
+              displayContent.match(/^\[video\]([\s\S]+)\[\/video\]$/) ||
+              displayContent.match(/^\[voice\]([\s\S]+)\[\/voice\]$/));
           return (
             <div
               ref={bubbleRef}
@@ -2429,6 +2471,18 @@ function MessageBubble({
                   </p>
                 ) : (
                   (() => {
+                    const voiceContentMatch = displayContent.match(
+                      /^\[voice\]([\s\S]+)\[\/voice\]$/,
+                    );
+                    if (voiceContentMatch) {
+                      return (
+                        <VoiceMessageBubble
+                          blobUrl={voiceContentMatch[1]}
+                          duration={0}
+                          isOwn={isOwn}
+                        />
+                      );
+                    }
                     const imgContentMatch = displayContent.match(
                       /^\[img\]([\s\S]+)\[\/img\]$/,
                     );
@@ -2530,6 +2584,7 @@ function MessageBubble({
 
                 {!displayContent.match(/^\[img\]([\s\S]+)\[\/img\]$/) &&
                   !displayContent.match(/^\[video\]([\s\S]+)\[\/video\]$/) &&
+                  !displayContent.match(/^\[voice\]([\s\S]+)\[\/voice\]$/) &&
                   !isDeleted && (
                     <span
                       className={`msg-time absolute bottom-2 right-2 flex items-center gap-1 ${
@@ -2677,12 +2732,32 @@ function PendingBubble({
   if (message.isVoice && message.voiceBlobUrl) {
     return (
       <div className="flex justify-end mt-0.5">
-        <div className="max-w-[75%] flex flex-col items-end">
+        <div className="max-w-[75%] flex flex-col items-end opacity-80">
           <VoiceMessageBubble
             blobUrl={message.voiceBlobUrl}
             duration={message.voiceDuration ?? 0}
             isOwn
           />
+          {message.pending && (
+            <div className="flex items-center gap-1 mt-0.5 mr-2">
+              <Loader2
+                size={10}
+                className="animate-spin text-muted-foreground"
+              />
+              <span className="text-[10px] text-muted-foreground">
+                Sending...
+              </span>
+            </div>
+          )}
+          {message.failed && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="text-red-400 text-[10px] font-medium mt-0.5 mr-2"
+            >
+              {errorLabel}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -2948,20 +3023,36 @@ function VoiceMessageBubble({
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(duration);
+  const [currentTime, setCurrentTime] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const audio = new Audio(blobUrl);
+    const audio = new Audio();
+    // Set crossOrigin to allow playback of data URLs and blob URLs
+    audio.preload = "metadata";
+    audio.src = blobUrl;
     audioRef.current = audio;
 
+    audio.onloadedmetadata = () => {
+      if (audio.duration && Number.isFinite(audio.duration)) {
+        setAudioDuration(Math.round(audio.duration));
+      }
+    };
     audio.ontimeupdate = () => {
-      if (audio.duration) {
+      if (audio.duration && Number.isFinite(audio.duration)) {
         setProgress(audio.currentTime / audio.duration);
+        setCurrentTime(Math.floor(audio.currentTime));
       }
     };
     audio.onended = () => {
       setIsPlaying(false);
       setProgress(0);
+      setCurrentTime(0);
+    };
+    audio.onerror = () => {
+      // Audio failed to load
+      setIsPlaying(false);
     };
 
     return () => {
@@ -2970,14 +3061,18 @@ function VoiceMessageBubble({
     };
   }, [blobUrl]);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch {
+        setIsPlaying(false);
+      }
     }
   };
 
@@ -2986,6 +3081,8 @@ function VoiceMessageBubble({
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
+
+  const displayDuration = isPlaying ? currentTime : audioDuration;
 
   return (
     <div className={isOwn ? "bubble-out" : "bubble-in"}>
@@ -3052,7 +3149,7 @@ function VoiceMessageBubble({
         <span
           className={`text-[11px] font-medium flex-shrink-0 ${isOwn ? "text-white/70" : "text-muted-foreground"}`}
         >
-          {fmt(duration)}
+          {fmt(displayDuration)}
         </span>
       </div>
     </div>

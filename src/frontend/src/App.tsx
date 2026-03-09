@@ -1,9 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Chat } from "./backend.d";
 import AuthScreen from "./components/AuthScreen";
 import ChatListScreen from "./components/ChatListScreen";
 import ChatScreen from "./components/ChatScreen";
+import GroupJoinScreen from "./components/GroupJoinScreen";
 import RegistrationScreen from "./components/RegistrationScreen";
 import SettingsScreen from "./components/SettingsScreen";
 import { SettingsProvider, useSettingsSync } from "./contexts/SettingsContext";
@@ -19,6 +20,14 @@ function AppInner() {
   const { data: myUser, isFetched: userFetched } = useMyUser();
   const [activeView, setActiveView] = useState<AppView>("list");
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
+
+  // Detect invite token in URL
+  const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(
+    () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("joinGroup");
+    },
+  );
 
   // Sync displayName from myUser into settings context
   useSettingsSync(myUser?.name);
@@ -47,6 +56,22 @@ function AppInner() {
 
   const handleLogout = () => {
     clear();
+  };
+
+  const handleJoinGroup = (chat: Chat) => {
+    // Clear invite token from URL without reload
+    const url = new URL(window.location.href);
+    url.searchParams.delete("joinGroup");
+    window.history.replaceState({}, "", url.toString());
+    setPendingInviteToken(null);
+    openChat(chat);
+  };
+
+  const handleDismissJoin = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("joinGroup");
+    window.history.replaceState({}, "", url.toString());
+    setPendingInviteToken(null);
   };
 
   // Only block during the initial local-storage read (< 300ms)
@@ -80,7 +105,6 @@ function AppInner() {
   }
 
   // Identity exists → show main app immediately regardless of backend state
-  // Backend data (chats, profile) loads in background via React Query
   return (
     <div className="app-shell">
       <Toaster position="top-center" />
@@ -139,6 +163,18 @@ function AppInner() {
           onLogout={handleLogout}
         />
       </div>
+
+      {/* Group Join Overlay */}
+      {pendingInviteToken && (
+        <div className="absolute inset-0 z-40">
+          <GroupJoinScreen
+            token={pendingInviteToken}
+            myUser={myUser ?? null}
+            onJoined={handleJoinGroup}
+            onDismiss={handleDismissJoin}
+          />
+        </div>
+      )}
     </div>
   );
 }

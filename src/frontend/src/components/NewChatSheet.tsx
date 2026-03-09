@@ -117,6 +117,7 @@ export default function NewChatSheet({
         participants: selectedUsers.map((u) => u.principal as Principal),
       });
       // Save group avatar to localStorage
+      localStorage.setItem(`groupName_${chat.id}`, groupName.trim());
       if (groupImage) {
         localStorage.setItem(`groupAvatar_${chat.id}`, groupImage);
       }
