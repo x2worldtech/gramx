@@ -13,11 +13,13 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ChatType } from "../backend.d";
 import type { Chat, User } from "../backend.d";
 import { useAvatarImages } from "../hooks/useAvatarImages";
 import {
   useCreateDirectChat,
   useCreateGroupChat,
+  useMyChats,
   useSearchUsers,
 } from "../hooks/useQueries";
 import { useTranslation } from "../i18n/useTranslation";
@@ -48,6 +50,7 @@ export default function NewChatSheet({
   const { t } = useTranslation();
 
   const { data: results = [], isLoading: searching } = useSearchUsers(query);
+  const { data: chats = [] } = useMyChats();
   const createDirect = useCreateDirectChat();
   const createGroup = useCreateGroupChat();
 
@@ -86,6 +89,27 @@ export default function NewChatSheet({
 
   const handleSelectUser = async (user: User) => {
     if (mode === "select") {
+      // Check if a direct chat with this user already exists
+      const myPrincipal = myUser?.principal.toString();
+      const targetPrincipal = user.principal.toString();
+      const existingChat = chats.find(
+        (c) =>
+          c.chatType === ChatType.direct &&
+          c.participants.some(
+            (p) => p.principal.toString() === targetPrincipal,
+          ) &&
+          c.participants.some(
+            (p) =>
+              p.principal.toString() !== myPrincipal ||
+              c.participants.length === 1,
+          ),
+      );
+
+      if (existingChat) {
+        onChatCreated(existingChat);
+        return;
+      }
+
       try {
         const chat = await createDirect.mutateAsync(
           user.principal as Principal,

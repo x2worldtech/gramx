@@ -32,6 +32,7 @@ import { formatTime } from "../utils/avatarUtils";
 import Avatar from "./Avatar";
 import ForwardChatSheet from "./ForwardChatSheet";
 import GroupInfoSheet from "./GroupInfoSheet";
+import UserProfileSheet from "./UserProfileSheet";
 
 interface PendingMessage {
   id: string;
@@ -182,6 +183,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   const [messageText, setMessageText] = useState("");
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  const [profilePrincipal, setProfilePrincipal] = useState<string | null>(null);
   const [localData, setLocalData] = useState<Map<number, LocalMessageData>>(
     new Map(),
   );
@@ -1214,9 +1216,12 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
 
           <button
             type="button"
-            onClick={() => isGroup && setGroupInfoOpen(true)}
-            className={`flex-1 flex items-center gap-2.5 px-1 py-1 rounded-lg ${isGroup ? "active:bg-muted/60" : ""} transition-colors`}
-            disabled={!isGroup}
+            onClick={() =>
+              isGroup
+                ? setGroupInfoOpen(true)
+                : setProfilePrincipal(otherUser?.principal.toString() ?? null)
+            }
+            className="flex-1 flex items-center gap-2.5 px-1 py-1 rounded-lg active:bg-muted/60 transition-colors"
           >
             <Avatar
               name={displayName}
@@ -1295,6 +1300,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
               onLongPress={(el) => openContextMenu(msg, isOwn, el)}
               onReactionToggle={(emoji) => toggleReaction(msg.id, emoji)}
               onMediaTap={handleMediaTap}
+              onSenderClick={(p) => setProfilePrincipal(p)}
             />
           );
         })}
@@ -1938,6 +1944,12 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       </AnimatePresence>
 
       {/* Group Info Screen */}
+      <UserProfileSheet
+        open={!!profilePrincipal}
+        onClose={() => setProfilePrincipal(null)}
+        principal={profilePrincipal ?? ""}
+      />
+
       {isGroup && (
         <GroupInfoSheet
           open={groupInfoOpen}
@@ -2323,6 +2335,7 @@ interface MessageBubbleProps {
   onLongPress: (el: HTMLElement) => void;
   onReactionToggle: (emoji: string) => void;
   onMediaTap: (src: string, type: "image" | "video") => void;
+  onSenderClick?: (principal: string) => void;
 }
 
 function MessageBubble({
@@ -2336,6 +2349,7 @@ function MessageBubble({
   onLongPress,
   onReactionToggle,
   onMediaTap,
+  onSenderClick,
 }: MessageBubbleProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -2386,13 +2400,17 @@ function MessageBubble({
       transition={{ duration: 0.18, ease: "easeOut" }}
     >
       {!isOwn && !sameAsPrev && (
-        <div className="mr-1.5 mt-auto mb-1 flex-shrink-0">
+        <button
+          type="button"
+          className="mr-1.5 mt-auto mb-1 flex-shrink-0 cursor-pointer bg-transparent border-none p-0"
+          onClick={() => onSenderClick?.(message.sender.principal.toString())}
+        >
           <Avatar
             name={message.sender.name}
             size="sm"
             avatarImage={senderAvatarImage}
           />
-        </div>
+        </button>
       )}
       {!isOwn && sameAsPrev && (
         <div className="w-[34px] mr-1.5 flex-shrink-0" />
@@ -2402,9 +2420,13 @@ function MessageBubble({
         className={`max-w-[75%] min-w-0 flex flex-col ${isOwn ? "items-end" : "items-start"}`}
       >
         {showSender && !sameAsPrev && (
-          <span className="text-xs font-semibold text-primary mb-1 ml-1">
+          <button
+            type="button"
+            className="text-xs font-semibold text-primary mb-1 ml-1 cursor-pointer bg-transparent border-none p-0"
+            onClick={() => onSenderClick?.(message.sender.principal.toString())}
+          >
             {message.sender.name}
-          </span>
+          </button>
         )}
 
         {(() => {

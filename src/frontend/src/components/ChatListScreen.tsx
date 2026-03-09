@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Search,
   Settings,
+  Users,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useRef, useState } from "react";
@@ -38,6 +39,7 @@ import {
   markChatsAsRead,
 } from "../utils/unreadUtils";
 import Avatar from "./Avatar";
+import ContactsTab from "./ContactsTab";
 import NewChatSheet from "./NewChatSheet";
 
 interface ChatListScreenProps {
@@ -289,92 +291,99 @@ export default function ChatListScreen({
         </div>
       </div>
 
-      {/* Chat List */}
-      <div className="flex-1 overflow-y-auto overscroll-contain">
-        {isLoading ? (
-          <div data-ocid="chat_list.loading_state" className="flex flex-col">
-            {["s1", "s2", "s3", "s4", "s5"].map((k) => (
-              <ChatRowSkeleton key={k} />
-            ))}
-          </div>
-        ) : (
-          <>
-            {/* Archived folder row (only shown on main screen, not in edit mode) */}
-            {screen === "main" && !editMode && archivedChats.length > 0 && (
-              <button
-                type="button"
-                data-ocid="chat_list.archived_folder.button"
-                onClick={() => setScreen("archived")}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left"
-              >
-                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                  <Archive size={20} className="text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="font-semibold text-sm text-foreground">
-                    {t("chatlist_archived_folder")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm text-muted-foreground">
-                    {archivedChats.length}
-                  </span>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </div>
-              </button>
-            )}
+      {/* Chat List / Contacts */}
+      {activeTab === "chats" ? (
+        <ContactsTab myUser={myUser} onOpenChat={onOpenChat} />
+      ) : (
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          {isLoading ? (
+            <div data-ocid="chat_list.loading_state" className="flex flex-col">
+              {["s1", "s2", "s3", "s4", "s5"].map((k) => (
+                <ChatRowSkeleton key={k} />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Archived folder row (only shown on main screen, not in edit mode) */}
+              {screen === "main" && !editMode && archivedChats.length > 0 && (
+                <button
+                  type="button"
+                  data-ocid="chat_list.archived_folder.button"
+                  onClick={() => setScreen("archived")}
+                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left"
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                    <Archive size={20} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-semibold text-sm text-foreground">
+                      {t("chatlist_archived_folder")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm text-muted-foreground">
+                      {archivedChats.length}
+                    </span>
+                    <ChevronRight size={16} className="text-muted-foreground" />
+                  </div>
+                </button>
+              )}
 
-            {displayChats.length === 0 ? (
-              <div
-                data-ocid="chat_list.empty_state"
-                className="flex flex-col items-center justify-center flex-1 gap-4 pt-20 px-8"
-              >
-                <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
-                  <MessageCircle size={36} className="text-muted-foreground" />
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-foreground">
-                    {t("chatlist_no_chats")}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {searchQuery
-                      ? t("chatlist_no_chats_search")
-                      : t("chatlist_start_conversation")}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <AnimatePresence>
-                {displayChats.map((chat, index) => (
-                  <motion.div
-                    key={chat.id}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{
-                      delay: Math.min(index * 0.04, 0.2),
-                      duration: 0.2,
-                    }}
-                  >
-                    <ChatRow
-                      data-ocid={`chat_list.item.${index + 1}`}
-                      chat={chat}
-                      myUser={myUser}
-                      displayName={getChatDisplayName(chat)}
-                      onClick={() => handleChatClick(chat)}
-                      noMessagesLabel={t("chatlist_no_messages")}
-                      avatarMap={avatarMap}
-                      editMode={editMode}
-                      selected={selectedChatIds.has(chat.id)}
-                      checkboxOcid={`edit_mode.checkbox.${index + 1}`}
-                      principalId={principalId}
+              {displayChats.length === 0 ? (
+                <div
+                  data-ocid="chat_list.empty_state"
+                  className="flex flex-col items-center justify-center flex-1 gap-4 pt-20 px-8"
+                >
+                  <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+                    <MessageCircle
+                      size={36}
+                      className="text-muted-foreground"
                     />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            )}
-          </>
-        )}
-      </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-foreground">
+                      {t("chatlist_no_chats")}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {searchQuery
+                        ? t("chatlist_no_chats_search")
+                        : t("chatlist_start_conversation")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <AnimatePresence>
+                  {displayChats.map((chat, index) => (
+                    <motion.div
+                      key={chat.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{
+                        delay: Math.min(index * 0.04, 0.2),
+                        duration: 0.2,
+                      }}
+                    >
+                      <ChatRow
+                        data-ocid={`chat_list.item.${index + 1}`}
+                        chat={chat}
+                        myUser={myUser}
+                        displayName={getChatDisplayName(chat)}
+                        onClick={() => handleChatClick(chat)}
+                        noMessagesLabel={t("chatlist_no_messages")}
+                        avatarMap={avatarMap}
+                        editMode={editMode}
+                        selected={selectedChatIds.has(chat.id)}
+                        checkboxOcid={`edit_mode.checkbox.${index + 1}`}
+                        principalId={principalId}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Bottom Bar: Edit action bar OR normal tab bar */}
       {editMode ? (
@@ -528,7 +537,7 @@ export default function ChatListScreen({
                 activeTab === "chats" ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <MessageCircle
+              <Users
                 size={22}
                 strokeWidth={activeTab === "chats" ? 2.5 : 1.8}
               />
@@ -585,18 +594,21 @@ export default function ChatListScreen({
       )}
 
       {/* FAB - New Chat (hidden when edit mode or settings tab active) */}
-      {!editMode && activeTab !== "settings" && screen === "main" && (
-        <motion.button
-          data-ocid="new_chat.open_modal_button"
-          onClick={() => setNewChatOpen(true)}
-          className="absolute bottom-20 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-ios flex items-center justify-center z-20"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label={t("new_chat_title")}
-        >
-          <Edit2 size={22} />
-        </motion.button>
-      )}
+      {!editMode &&
+        activeTab !== "settings" &&
+        activeTab !== "chats" &&
+        screen === "main" && (
+          <motion.button
+            data-ocid="new_chat.open_modal_button"
+            onClick={() => setNewChatOpen(true)}
+            className="absolute bottom-20 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-ios flex items-center justify-center z-20"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label={t("new_chat_title")}
+          >
+            <Edit2 size={22} />
+          </motion.button>
+        )}
 
       <NewChatSheet
         open={newChatOpen}
