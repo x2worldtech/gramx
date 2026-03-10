@@ -58,9 +58,9 @@ export default function ChatListScreen({
   const { data: chats, isLoading } = useMyChats();
   const { t } = useTranslation();
   const [newChatOpen, setNewChatOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chats" | "contacts" | "settings">(
-    "chats",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "contacts" | "chats" | "search" | "settings"
+  >("chats");
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -292,7 +292,7 @@ export default function ChatListScreen({
       </div>
 
       {/* Chat List / Contacts */}
-      {activeTab === "chats" ? (
+      {activeTab === "contacts" ? (
         <ContactsTab myUser={myUser} onOpenChat={onOpenChat} />
       ) : (
         <div className="flex-1 overflow-y-auto overscroll-contain">
@@ -528,7 +528,28 @@ export default function ChatListScreen({
           <div className="flex">
             <button
               type="button"
-              data-ocid="chat_list.tab"
+              data-ocid="chat_list.contacts_tab"
+              onClick={() => {
+                setActiveTab("contacts");
+                setScreen("main");
+              }}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
+                activeTab === "contacts"
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Users
+                size={22}
+                strokeWidth={activeTab === "contacts" ? 2.5 : 1.8}
+              />
+              <span className="text-[10px] font-medium">
+                {t("chatlist_tab_chats")}
+              </span>
+            </button>
+            <button
+              type="button"
+              data-ocid="chat_list.chats_tab"
               onClick={() => {
                 setActiveTab("chats");
                 setScreen("main");
@@ -537,32 +558,32 @@ export default function ChatListScreen({
                 activeTab === "chats" ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <Users
+              <MessageCircle
                 size={22}
                 strokeWidth={activeTab === "chats" ? 2.5 : 1.8}
               />
               <span className="text-[10px] font-medium">
-                {t("chatlist_tab_chats")}
+                {t("chatlist_tab_chats_list")}
               </span>
             </button>
             <button
               type="button"
-              data-ocid="chat_list.tab"
+              data-ocid="chat_list.search_tab"
               onClick={() => {
-                setActiveTab("contacts");
+                setActiveTab("search");
                 setScreen("main");
                 // Focus immediately (same event loop tick) so iOS opens keyboard
                 searchInputRef.current?.focus();
               }}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
-                activeTab === "contacts"
+                activeTab === "search"
                   ? "text-primary"
                   : "text-muted-foreground"
               }`}
             >
               <Search
                 size={22}
-                strokeWidth={activeTab === "contacts" ? 2.5 : 1.8}
+                strokeWidth={activeTab === "search" ? 2.5 : 1.8}
               />
               <span className="text-[10px] font-medium">
                 {t("chatlist_tab_search")}
@@ -594,21 +615,18 @@ export default function ChatListScreen({
       )}
 
       {/* FAB - New Chat (hidden when edit mode or settings tab active) */}
-      {!editMode &&
-        activeTab !== "settings" &&
-        activeTab !== "chats" &&
-        screen === "main" && (
-          <motion.button
-            data-ocid="new_chat.open_modal_button"
-            onClick={() => setNewChatOpen(true)}
-            className="absolute bottom-20 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-ios flex items-center justify-center z-20"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label={t("new_chat_title")}
-          >
-            <Edit2 size={22} />
-          </motion.button>
-        )}
+      {!editMode && activeTab === "chats" && screen === "main" && (
+        <motion.button
+          data-ocid="new_chat.open_modal_button"
+          onClick={() => setNewChatOpen(true)}
+          className="absolute bottom-20 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-ios flex items-center justify-center z-20"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label={t("new_chat_title")}
+        >
+          <Edit2 size={22} />
+        </motion.button>
+      )}
 
       <NewChatSheet
         open={newChatOpen}

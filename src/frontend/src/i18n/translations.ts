@@ -37,6 +37,7 @@ const en = {
   chatlist_start_conversation: "Start a conversation!",
   chatlist_no_messages: "No messages",
   chatlist_tab_chats: "Contacts",
+  chatlist_tab_chats_list: "Chats",
   chatlist_tab_search: "Search",
   chatlist_tab_settings: "Settings",
 
@@ -237,6 +238,7 @@ const de: typeof en = {
   chatlist_start_conversation: "Starte ein Gespräch!",
   chatlist_no_messages: "Keine Nachrichten",
   chatlist_tab_chats: "Kontakte",
+  chatlist_tab_chats_list: "Chats",
   chatlist_tab_search: "Suchen",
   chatlist_tab_settings: "Einstellungen",
 
@@ -426,6 +428,7 @@ const es: typeof en = {
   chatlist_start_conversation: "¡Inicia una conversación!",
   chatlist_no_messages: "Sin mensajes",
   chatlist_tab_chats: "Contactos",
+  chatlist_tab_chats_list: "Chats",
   chatlist_tab_search: "Buscar",
   chatlist_tab_settings: "Ajustes",
 
@@ -614,6 +617,7 @@ const ar: typeof en = {
   chatlist_start_conversation: "ابدأ محادثة!",
   chatlist_no_messages: "لا توجد رسائل",
   chatlist_tab_chats: "جهات الاتصال",
+  chatlist_tab_chats_list: "المحادثات",
   chatlist_tab_search: "بحث",
   chatlist_tab_settings: "الإعدادات",
 
@@ -802,6 +806,7 @@ const zh: typeof en = {
   chatlist_start_conversation: "开始一段对话！",
   chatlist_no_messages: "暂无消息",
   chatlist_tab_chats: "联系人",
+  chatlist_tab_chats_list: "聊天",
   chatlist_tab_search: "搜索",
   chatlist_tab_settings: "设置",
 
@@ -991,6 +996,7 @@ const fr: typeof en = {
   chatlist_start_conversation: "Commencez une conversation !",
   chatlist_no_messages: "Aucun message",
   chatlist_tab_chats: "Contacts",
+  chatlist_tab_chats_list: "Chats",
   chatlist_tab_search: "Recherche",
   chatlist_tab_settings: "Paramètres",
 
@@ -1181,6 +1187,7 @@ const ru: typeof en = {
   chatlist_start_conversation: "Начните разговор!",
   chatlist_no_messages: "Нет сообщений",
   chatlist_tab_chats: "Контакты",
+  chatlist_tab_chats_list: "Чаты",
   chatlist_tab_search: "Поиск",
   chatlist_tab_settings: "Настройки",
 
@@ -1369,6 +1376,7 @@ const it: typeof en = {
   chatlist_start_conversation: "Inizia una conversazione!",
   chatlist_no_messages: "Nessun messaggio",
   chatlist_tab_chats: "Contatti",
+  chatlist_tab_chats_list: "Chat",
   chatlist_tab_search: "Cerca",
   chatlist_tab_settings: "Impostazioni",
 
@@ -1557,6 +1565,7 @@ const ko: typeof en = {
   chatlist_start_conversation: "대화를 시작해보세요!",
   chatlist_no_messages: "메시지 없음",
   chatlist_tab_chats: "연락처",
+  chatlist_tab_chats_list: "채팅",
   chatlist_tab_search: "검색",
   chatlist_tab_settings: "설정",
 

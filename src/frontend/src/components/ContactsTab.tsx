@@ -3,8 +3,10 @@ import { Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { Chat, User } from "../backend.d";
+import { ChatType } from "../backend.d";
 import { useActor } from "../hooks/useActor";
 import { useAvatarImages } from "../hooks/useAvatarImages";
+import { useMyChats } from "../hooks/useQueries";
 import { useTranslation } from "../i18n/useTranslation";
 import { type ContactEntry, getContacts } from "../utils/contactsUtils";
 import Avatar from "./Avatar";
@@ -15,13 +17,18 @@ interface ContactsTabProps {
   onOpenChat: (chat: Chat) => void;
 }
 
-export default function ContactsTab({ onOpenChat }: ContactsTabProps) {
+export default function ContactsTab({
+  myUser: _myUser,
+  onOpenChat,
+}: ContactsTabProps) {
   const { t } = useTranslation();
   const { actor } = useActor();
   const [contacts, setContacts] = useState<ContactEntry[]>([]);
   const [selectedPrincipal, setSelectedPrincipal] = useState<string | null>(
     null,
   );
+
+  const { data: existingChats } = useMyChats();
 
   const refresh = () => setContacts(getContacts());
 
@@ -36,6 +43,20 @@ export default function ContactsTab({ onOpenChat }: ContactsTabProps) {
   const handleStartChat = async (principal: string) => {
     if (!actor) return;
     try {
+      // Check if a direct chat with this user already exists
+      if (existingChats) {
+        const existing = existingChats.find(
+          (chat) =>
+            chat.chatType === ChatType.direct &&
+            chat.participants.some((p) => p.principal.toString() === principal),
+        );
+        if (existing) {
+          setSelectedPrincipal(null);
+          onOpenChat(existing);
+          return;
+        }
+      }
+      // No existing chat found -- create a new one
       const chat = await actor.createDirectChat(Principal.fromText(principal));
       setSelectedPrincipal(null);
       onOpenChat(chat);

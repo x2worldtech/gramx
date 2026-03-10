@@ -367,12 +367,7 @@ export default function GroupInfoScreen({
       {open && (
         <motion.div
           data-ocid="group_info.panel"
-          className="absolute inset-0 z-50 flex flex-col overflow-hidden"
-          style={{
-            background: darkMode
-              ? "linear-gradient(180deg, #0d1421 0%, #0a0f1a 100%)"
-              : "#f2f2f7",
-          }}
+          className={`absolute inset-0 z-50 flex flex-col overflow-hidden ${darkMode ? "bg-background" : "bg-[#f2f2f7]"}`}
           initial={{ x: "100%" }}
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
