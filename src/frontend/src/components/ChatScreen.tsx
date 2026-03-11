@@ -163,6 +163,16 @@ const ALL_EMOJIS = [
   "🤔",
   "😎",
   "🤩",
+  "😍",
+  "🤗",
+  "😴",
+  "🥳",
+  "😅",
+  "🤭",
+  "👌",
+  "✌️",
+  "🫶",
+  "🙌",
 ];
 
 interface ChatScreenProps {
@@ -358,10 +368,15 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
           );
         }
       } else {
-        newReactions = [
-          ...existing.reactions,
-          { emoji, count: 1, myReaction: true },
-        ];
+        // Remove any existing reaction by me (max 1 per message)
+        const cleaned = existing.reactions
+          .map((rr) =>
+            rr.myReaction
+              ? { ...rr, count: rr.count - 1, myReaction: false }
+              : rr,
+          )
+          .filter((rr) => rr.count > 0);
+        newReactions = [...cleaned, { emoji, count: 1, myReaction: true }];
       }
       next.set(messageId, { ...existing, reactions: newReactions });
       return next;
@@ -2039,23 +2054,48 @@ function MessageContextMenu({
   t,
 }: MessageContextMenuProps) {
   const emojis = showAllEmojis ? ALL_EMOJIS : QUICK_EMOJIS;
+  const time = formatTime(contextMenu.message.timestamp);
 
-  // Calculate position: center the menu horizontally, position vertically near message
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const menuWidth = Math.min(280, viewportWidth - 32);
-  const msgCenterX = contextMenu.rect.left + contextMenu.rect.width / 2;
-  let menuLeft = msgCenterX - menuWidth / 2;
-  menuLeft = Math.max(16, Math.min(menuLeft, viewportWidth - menuWidth - 16));
 
-  // Position menu above or below message depending on space
-  const spaceBelow = viewportHeight - contextMenu.rect.bottom;
-  const approxMenuHeight = 200;
-  const showBelow =
-    spaceBelow > approxMenuHeight || contextMenu.rect.top < approxMenuHeight;
-  const menuTop = showBelow
-    ? contextMenu.rect.bottom + 12
-    : contextMenu.rect.top - approxMenuHeight - 12;
+  // Bubble position (unchanged from original)
+  const bubbleTop = contextMenu.rect.top;
+  const bubbleLeft = contextMenu.rect.left;
+  const bubbleWidth = contextMenu.rect.width;
+  const bubbleHeight = contextMenu.rect.height;
+
+  // Emoji bar: always above bubble
+  const emojiBarHeight = showAllEmojis ? 200 : 56;
+  const emojiBarWidth = Math.min(320, viewportWidth - 32);
+  let emojiBarLeft = contextMenu.isOwn
+    ? contextMenu.rect.right - emojiBarWidth
+    : contextMenu.rect.left;
+  emojiBarLeft = Math.max(
+    16,
+    Math.min(emojiBarLeft, viewportWidth - emojiBarWidth - 16),
+  );
+  const emojiBarBottom = bubbleTop - 8;
+  const emojiBarTop = emojiBarBottom - emojiBarHeight;
+
+  // Action menu: always below bubble
+  const actionMenuWidth = Math.min(280, viewportWidth - 32);
+  let actionMenuLeft = contextMenu.isOwn
+    ? contextMenu.rect.right - actionMenuWidth
+    : contextMenu.rect.left;
+  actionMenuLeft = Math.max(
+    16,
+    Math.min(actionMenuLeft, viewportWidth - actionMenuWidth - 16),
+  );
+
+  // If not enough space below, show above emoji bar
+  const spaceBelow = viewportHeight - (bubbleTop + bubbleHeight);
+  const approxActionHeight = 220;
+  const showActionBelow =
+    spaceBelow >= approxActionHeight || emojiBarTop < approxActionHeight;
+  const actionMenuTop = showActionBelow
+    ? bubbleTop + bubbleHeight + 16
+    : emojiBarTop - approxActionHeight - 8;
 
   return (
     <AnimatePresence>
@@ -2069,72 +2109,86 @@ function MessageContextMenu({
         {/* Blur overlay */}
         <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
 
-        {/* Highlighted message clone */}
+        {/* Highlighted message clone — exact position, no layout changes */}
         <motion.div
           className="absolute pointer-events-none"
           style={{
-            left: contextMenu.rect.left,
-            top: contextMenu.rect.top,
-            width: contextMenu.rect.width,
+            left: bubbleLeft,
+            top: bubbleTop,
+            width: bubbleWidth,
+            height: bubbleHeight,
           }}
-          initial={{ scale: 0.97, opacity: 0.8 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.15 }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 1 }}
         >
           <div
             className={contextMenu.isOwn ? "bubble-out" : "bubble-in"}
-            style={{ display: "inline-block", maxWidth: "100%" }}
+            style={{ width: "100%", boxSizing: "border-box" }}
           >
-            <div className="px-3 py-2">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-all">
+            <div className="px-3 py-2 relative">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-10">
                 {contextMenu.message.content}
               </p>
+              <span
+                className={`text-[10px] font-medium flex items-center gap-1 float-right mt-1 ${contextMenu.isOwn ? "text-white/70" : "text-muted-foreground"}`}
+              >
+                {time}
+              </span>
             </div>
           </div>
         </motion.div>
 
-        {/* Menu */}
+        {/* Emoji bar — always above bubble */}
         <motion.div
           className="absolute"
           style={{
-            left: menuLeft,
-            top: Math.max(
-              8,
-              Math.min(menuTop, viewportHeight - approxMenuHeight - 8),
-            ),
-            width: menuWidth,
+            left: emojiBarLeft,
+            top: Math.max(8, emojiBarTop),
+            width: emojiBarWidth,
           }}
-          initial={{ opacity: 0, scale: 0.92, y: showBelow ? -8 : 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Emoji bar */}
-          <div className="bg-[#1c1c1e] rounded-2xl px-3 py-2 mb-2 shadow-2xl">
-            <div className="flex items-center justify-between gap-1">
-              {emojis.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => onEmojiReact(emoji)}
-                  className="text-2xl leading-none p-1 active:scale-75 transition-transform flex-shrink-0"
-                >
-                  {emoji}
-                </button>
-              ))}
-              {!showAllEmojis && (
+          <div className="bg-[#1c1c1e] rounded-2xl px-3 py-2 shadow-2xl">
+            {showAllEmojis ? (
+              <div className="overflow-y-auto max-h-48 grid grid-cols-7 gap-1">
+                {emojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => onEmojiReact(emoji)}
+                    className="text-2xl leading-none p-1 active:scale-75 transition-transform flex items-center justify-center"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-1">
+                {emojis.slice(0, 6).map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => onEmojiReact(emoji)}
+                    className="text-2xl leading-none p-1 active:scale-75 transition-transform flex-shrink-0"
+                  >
+                    {emoji}
+                  </button>
+                ))}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onShowAllEmojis();
                   }}
-                  className="w-8 h-8 flex items-center justify-center text-white/60 active:opacity-60 flex-shrink-0"
+                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white active:opacity-60 flex-shrink-0"
                 >
                   <svg
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -2143,20 +2197,37 @@ function MessageContextMenu({
                     role="img"
                   >
                     <title>more</title>
-                    <polyline points="9 18 15 12 9 6" />
+                    <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
+        </motion.div>
 
-          {/* Action list */}
+        {/* Action menu — below bubble */}
+        <motion.div
+          className="absolute"
+          style={{
+            left: actionMenuLeft,
+            top: Math.max(
+              8,
+              Math.min(actionMenuTop, viewportHeight - approxActionHeight - 8),
+            ),
+            width: actionMenuWidth,
+          }}
+          initial={{ opacity: 0, scale: 0.92, y: -8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.92 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden shadow-2xl">
             {showDeleteConfirm ? (
               <>
                 <div className="px-4 py-3 border-b border-white/10">
-                  <p className="text-white text-sm text-center">
-                    {t("msg_delete_confirm")}
+                  <p className="text-sm text-white/70 text-center">
+                    Delete this message?
                   </p>
                 </div>
                 <div className="flex">

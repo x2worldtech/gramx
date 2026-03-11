@@ -1,6 +1,5 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Principal } from "@icp-sdk/core/principal";
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { UserProfile } from "../backend.d";
 import { useActor } from "../hooks/useActor";
@@ -109,15 +108,6 @@ export default function UserProfileSheet({
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
-
-        {/* Close */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground active:opacity-60"
-        >
-          <X size={16} />
-        </button>
 
         {loading ? (
           <div className="flex flex-col items-center gap-4 px-6 py-8 animate-pulse">
