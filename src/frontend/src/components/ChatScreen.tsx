@@ -2119,7 +2119,7 @@ function MessageContextMenu({
             height: bubbleHeight,
             overflow: "hidden",
           }}
-          initial={{ opacity: 0.85 }}
+          initial={{ opacity: 0.9 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.15 }}
         >
