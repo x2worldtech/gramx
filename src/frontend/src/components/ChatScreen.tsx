@@ -2116,8 +2116,6 @@ function MessageContextMenu({
             left: bubbleLeft,
             top: bubbleTop,
             width: bubbleWidth,
-            height: bubbleHeight,
-            overflow: "hidden",
           }}
           initial={{ opacity: 0.9 }}
           animate={{ opacity: 1 }}
