@@ -2117,9 +2117,11 @@ function MessageContextMenu({
             top: bubbleTop,
             width: bubbleWidth,
             height: bubbleHeight,
+            overflow: "hidden",
           }}
-          initial={{ opacity: 1 }}
+          initial={{ opacity: 0.85 }}
           animate={{ opacity: 1 }}
+          transition={{ duration: 0.15 }}
         >
           <div
             className={contextMenu.isOwn ? "bubble-out" : "bubble-in"}
