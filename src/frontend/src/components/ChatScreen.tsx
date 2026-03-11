@@ -2116,9 +2116,10 @@ function MessageContextMenu({
             left: bubbleLeft,
             top: bubbleTop,
             width: bubbleWidth,
+            minHeight: bubbleHeight,
           }}
-          initial={{ opacity: 0.9 }}
-          animate={{ opacity: 1 }}
+          initial={{ scale: 0.97, opacity: 0.85 }}
+          animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.15 }}
         >
           <div
@@ -2206,106 +2207,111 @@ function MessageContextMenu({
         </motion.div>
 
         {/* Action menu — below bubble */}
-        <motion.div
-          className="absolute"
-          style={{
-            left: actionMenuLeft,
-            top: Math.max(
-              8,
-              Math.min(actionMenuTop, viewportHeight - approxActionHeight - 8),
-            ),
-            width: actionMenuWidth,
-          }}
-          initial={{ opacity: 0, scale: 0.92, y: -8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden shadow-2xl">
-            {showDeleteConfirm ? (
-              <>
-                <div className="px-4 py-3 border-b border-white/10">
-                  <p className="text-sm text-white/70 text-center">
-                    Delete this message?
-                  </p>
-                </div>
-                <div className="flex">
-                  <button
-                    type="button"
-                    onClick={onDeleteCancel}
-                    className="flex-1 px-4 py-3 text-sm text-white/80 active:bg-white/10 transition-colors border-r border-white/10"
-                  >
-                    {t("msg_cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onDeleteConfirm}
-                    className="flex-1 px-4 py-3 text-sm text-red-400 font-semibold active:bg-white/10 transition-colors"
-                  >
-                    {t("msg_delete")}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <ContextMenuItem
-                  icon={<CornerUpLeft size={18} />}
-                  label={t("msg_reply")}
-                  onClick={onReply}
-                />
-                <div className="h-px bg-white/10 mx-4" />
-                <ContextMenuItem
-                  icon={
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      aria-label="copy"
-                      role="img"
+        {!showAllEmojis && (
+          <motion.div
+            className="absolute"
+            style={{
+              left: actionMenuLeft,
+              top: Math.max(
+                8,
+                Math.min(
+                  actionMenuTop,
+                  viewportHeight - approxActionHeight - 8,
+                ),
+              ),
+              width: actionMenuWidth,
+            }}
+            initial={{ opacity: 0, scale: 0.92, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden shadow-2xl">
+              {showDeleteConfirm ? (
+                <>
+                  <div className="px-4 py-3 border-b border-white/10">
+                    <p className="text-sm text-white/70 text-center">
+                      Delete this message?
+                    </p>
+                  </div>
+                  <div className="flex">
+                    <button
+                      type="button"
+                      onClick={onDeleteCancel}
+                      className="flex-1 px-4 py-3 text-sm text-white/80 active:bg-white/10 transition-colors border-r border-white/10"
                     >
-                      <title>copy</title>
-                      <rect x="9" y="9" width="13" height="13" rx="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                  }
-                  label={t("msg_copy")}
-                  onClick={onCopy}
-                />
-                {contextMenu.isOwn && (
-                  <>
-                    <div className="h-px bg-white/10 mx-4" />
-                    <ContextMenuItem
-                      icon={<Pencil size={18} />}
-                      label={t("msg_edit")}
-                      onClick={onEdit}
-                    />
-                  </>
-                )}
-                <div className="h-px bg-white/10 mx-4" />
-                <ContextMenuItem
-                  icon={<Forward size={18} />}
-                  label={t("msg_forward")}
-                  onClick={onForward}
-                />
-                {contextMenu.isOwn && (
-                  <>
-                    <div className="h-px bg-white/10 mx-4" />
-                    <ContextMenuItem
-                      icon={<Trash2 size={18} />}
-                      label={t("msg_delete")}
-                      onClick={onDeleteRequest}
-                      destructive
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </motion.div>
+                      {t("msg_cancel")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onDeleteConfirm}
+                      className="flex-1 px-4 py-3 text-sm text-red-400 font-semibold active:bg-white/10 transition-colors"
+                    >
+                      {t("msg_delete")}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <ContextMenuItem
+                    icon={<CornerUpLeft size={18} />}
+                    label={t("msg_reply")}
+                    onClick={onReply}
+                  />
+                  <div className="h-px bg-white/10 mx-4" />
+                  <ContextMenuItem
+                    icon={
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        aria-label="copy"
+                        role="img"
+                      >
+                        <title>copy</title>
+                        <rect x="9" y="9" width="13" height="13" rx="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    }
+                    label={t("msg_copy")}
+                    onClick={onCopy}
+                  />
+                  {contextMenu.isOwn && (
+                    <>
+                      <div className="h-px bg-white/10 mx-4" />
+                      <ContextMenuItem
+                        icon={<Pencil size={18} />}
+                        label={t("msg_edit")}
+                        onClick={onEdit}
+                      />
+                    </>
+                  )}
+                  <div className="h-px bg-white/10 mx-4" />
+                  <ContextMenuItem
+                    icon={<Forward size={18} />}
+                    label={t("msg_forward")}
+                    onClick={onForward}
+                  />
+                  {contextMenu.isOwn && (
+                    <>
+                      <div className="h-px bg-white/10 mx-4" />
+                      <ContextMenuItem
+                        icon={<Trash2 size={18} />}
+                        label={t("msg_delete")}
+                        onClick={onDeleteRequest}
+                        destructive
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );
