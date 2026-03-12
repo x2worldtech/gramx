@@ -28,7 +28,6 @@ import {
   User,
 } from "lucide-react";
 import { useRef, useState } from "react";
-import { toast } from "sonner";
 import type { User as UserType } from "../backend.d";
 import { type AppLanguage, useSettings } from "../contexts/SettingsContext";
 import { useActor } from "../hooks/useActor";
@@ -161,9 +160,7 @@ export default function SettingsScreen({
         username: myUser.username,
       });
       setDisplayName(trimmed);
-      toast.success(t("settings_save_name_success"));
     } catch {
-      toast.error(t("settings_save_name_error"));
     } finally {
       setSavingName(false);
     }
@@ -171,7 +168,6 @@ export default function SettingsScreen({
 
   const handleSaveBio = () => {
     setBio(bioInput);
-    toast.success(t("settings_bio_saved"));
   };
 
   const handleDeleteAccount = async () => {
@@ -186,7 +182,6 @@ export default function SettingsScreen({
       queryClient.removeQueries({ queryKey: ["chat"] });
       onAccountDeleted();
     } catch {
-      toast.error(t("settings_delete_account_error"));
       setDeletingAccount(false);
     }
   };

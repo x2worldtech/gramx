@@ -1,4 +1,3 @@
-import { Toaster } from "@/components/ui/sonner";
 import { useEffect, useState } from "react";
 import type { Chat } from "./backend.d";
 import AuthScreen from "./components/AuthScreen";
@@ -87,7 +86,6 @@ function AppInner() {
   if (!identity) {
     return (
       <div className="app-shell">
-        <Toaster position="top-center" />
         <AuthScreen />
       </div>
     );
@@ -98,7 +96,6 @@ function AppInner() {
   if (actor && userFetched && myUser === null) {
     return (
       <div className="app-shell">
-        <Toaster position="top-center" />
         <RegistrationScreen />
       </div>
     );
@@ -107,8 +104,6 @@ function AppInner() {
   // Identity exists → show main app immediately regardless of backend state
   return (
     <div className="app-shell">
-      <Toaster position="top-center" />
-
       {/* Chat List */}
       <div
         className="absolute inset-0 flex flex-col"

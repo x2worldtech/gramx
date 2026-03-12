@@ -20,7 +20,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
-import { toast } from "sonner";
 import type { Chat, Message, User } from "../backend.d";
 import { ChatType } from "../backend.d";
 import { useSettings } from "../contexts/SettingsContext";
@@ -406,9 +405,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     const content =
       localData.get(contextMenu.message.id)?.editedContent ??
       contextMenu.message.content;
-    navigator.clipboard.writeText(content).then(() => {
-      toast.success(t("msg_copied"));
-    });
+    navigator.clipboard.writeText(content).then(() => {});
     closeContextMenu();
   };
 
@@ -466,10 +463,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         });
         return next;
       });
-      toast.success(t("msg_forwarded"));
-    } catch {
-      toast.error("Forward failed");
-    }
+    } catch {}
     setForwardMessage(null);
     void tempId;
   };
@@ -650,7 +644,6 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 100 * 1024 * 1024) {
-      toast.error("Video is too large. Max 100MB.");
       e.target.value = "";
       return;
     }
@@ -661,7 +654,6 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       const previewUrl = URL.createObjectURL(file);
       setSelectedImage({ file, previewUrl });
     } else {
-      toast.success(`📎 ${file.name}`);
     }
     // Reset input so same file can be re-selected
     e.target.value = "";
@@ -894,9 +886,7 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       );
       setShowLockHint(true);
       startTimers();
-    } catch {
-      toast.error("Microphone access denied");
-    }
+    } catch {}
   };
 
   const lockRecording = () => {

@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Camera, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useRef, useState } from "react";
-import { toast } from "sonner";
 import { useSettings } from "../contexts/SettingsContext";
 import { useActor } from "../hooks/useActor";
 import { useRegisterUser } from "../hooks/useQueries";
@@ -79,7 +78,6 @@ export default function RegistrationScreen() {
           });
         }
       }
-      toast.success(t("reg_success"));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (
@@ -88,7 +86,6 @@ export default function RegistrationScreen() {
       ) {
         setUsernameError(t("reg_error_username_taken"));
       } else {
-        toast.error(t("reg_error_failed"));
       }
     }
   };

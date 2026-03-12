@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import type { Chat, User } from "../backend.d";
 import { useSettings } from "../contexts/SettingsContext";
 import { useAvatarImages } from "../hooks/useAvatarImages";
@@ -340,7 +339,6 @@ export default function GroupInfoScreen({
       document.body.removeChild(el);
     }
     setCopiedUrl(true);
-    toast.success(t("group_invite_url_copied"));
     setTimeout(() => setCopiedUrl(false), 2500);
   };
 

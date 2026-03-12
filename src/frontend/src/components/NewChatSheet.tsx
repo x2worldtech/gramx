@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { ChatType } from "../backend.d";
 import type { Chat, User } from "../backend.d";
 import { useAvatarImages } from "../hooks/useAvatarImages";
@@ -115,9 +114,7 @@ export default function NewChatSheet({
           user.principal as Principal,
         );
         onChatCreated(chat);
-      } catch {
-        toast.error(t("new_chat_error"));
-      }
+      } catch {}
     } else {
       // Toggle selection for group
       setSelectedUsers((prev) =>
@@ -132,7 +129,6 @@ export default function NewChatSheet({
 
   const handleCreateGroup = async () => {
     if (!groupName.trim()) {
-      toast.error(t("new_group_error_name"));
       return;
     }
     try {
@@ -146,9 +142,7 @@ export default function NewChatSheet({
         localStorage.setItem(`groupAvatar_${chat.id}`, groupImage);
       }
       onChatCreated(chat);
-    } catch {
-      toast.error(t("new_group_error_create"));
-    }
+    } catch {}
   };
 
   const isSelected = (user: User) =>
