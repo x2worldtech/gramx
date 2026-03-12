@@ -1,4 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertCircle,
   Camera,
   ChevronLeft,
   CornerUpLeft,
@@ -45,6 +47,7 @@ interface PendingMessage {
   voiceBlobUrl?: string;
   voiceDuration?: number;
   uploadProgress?: { loaded: number; total: number } | null;
+  confirmedMessageId?: number;
 }
 
 type Reaction = {
@@ -183,6 +186,7 @@ interface ChatScreenProps {
 export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
   const { data: chatData } = useChat(chat.id);
   const sendMessage = useSendMessage();
+  const queryClient = useQueryClient();
   const {
     chatBackground,
     bubbleTheme,
@@ -273,6 +277,13 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     setPendingMessages((prev) =>
       prev.filter((pm) => {
         if (pm.failed) return true;
+        // If backend confirmed with a specific message ID, remove once that message appears
+        if (pm.confirmedMessageId !== undefined) {
+          return !activeChatData.messages.some(
+            (m) => m.id === pm.confirmedMessageId,
+          );
+        }
+        // Fallback: content match for text messages
         const found = activeChatData.messages.some(
           (m) =>
             m.content === pm.content &&
@@ -533,8 +544,18 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
     setPendingMessages((prev) => [...prev, pendingMsg]);
 
     try {
-      await sendMessage.mutateAsync({ content, chatId: chat.id });
-      setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+      const result = await sendMessage.mutateAsync({
+        content,
+        chatId: chat.id,
+      });
+      setPendingMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, pending: false, confirmedMessageId: result.id }
+            : m,
+        ),
+      );
+      queryClient.invalidateQueries({ queryKey: ["chat", chat.id] });
     } catch {
       setPendingMessages((prev) =>
         prev.map((m) =>
@@ -551,8 +572,18 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
       ),
     );
     try {
-      await sendMessage.mutateAsync({ content: pm.content, chatId: chat.id });
-      setPendingMessages((prev) => prev.filter((m) => m.id !== pm.id));
+      const retryResult = await sendMessage.mutateAsync({
+        content: pm.content,
+        chatId: chat.id,
+      });
+      setPendingMessages((prev) =>
+        prev.map((m) =>
+          m.id === pm.id
+            ? { ...m, pending: false, confirmedMessageId: retryResult.id }
+            : m,
+        ),
+      );
+      queryClient.invalidateQueries({ queryKey: ["chat", chat.id] });
     } catch {
       setPendingMessages((prev) =>
         prev.map((m) =>
@@ -700,11 +731,18 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         reader.readAsDataURL(file);
       });
 
-      await sendMessage.mutateAsync({
+      const imgResult = await sendMessage.mutateAsync({
         content: `[img]${base64}[/img]`,
         chatId: chat.id,
       });
-      setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setPendingMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, pending: false, confirmedMessageId: imgResult.id }
+            : m,
+        ),
+      );
+      queryClient.invalidateQueries({ queryKey: ["chat", chat.id] });
     } catch {
       setPendingMessages((prev) =>
         prev.map((m) =>
@@ -777,11 +815,18 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         ),
       );
 
-      await sendMessage.mutateAsync({
+      const videoResult = await sendMessage.mutateAsync({
         content: `[video]${base64}[/video]`,
         chatId: chat.id,
       });
-      setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setPendingMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, pending: false, confirmedMessageId: videoResult.id }
+            : m,
+        ),
+      );
+      queryClient.invalidateQueries({ queryKey: ["chat", chat.id] });
     } catch {
       setPendingMessages((prev) =>
         prev.map((m) =>
@@ -970,8 +1015,18 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         const base64 = reader.result as string;
         const content = `[voice]${base64}[/voice]`;
         try {
-          await sendMessage.mutateAsync({ content, chatId: chat.id });
-          setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+          const voiceResult = await sendMessage.mutateAsync({
+            content,
+            chatId: chat.id,
+          });
+          setPendingMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? { ...m, pending: false, confirmedMessageId: voiceResult.id }
+                : m,
+            ),
+          );
+          queryClient.invalidateQueries({ queryKey: ["chat", chat.id] });
         } catch {
           setPendingMessages((prev) =>
             prev.map((m) =>
@@ -1086,8 +1141,18 @@ export default function ChatScreen({ chat, myUser, onBack }: ChatScreenProps) {
         const base64 = reader.result as string;
         const content = `[voice]${base64}[/voice]`;
         try {
-          await sendMessage.mutateAsync({ content, chatId: chat.id });
-          setPendingMessages((prev) => prev.filter((m) => m.id !== tempId));
+          const voiceResult2 = await sendMessage.mutateAsync({
+            content,
+            chatId: chat.id,
+          });
+          setPendingMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? { ...m, pending: false, confirmedMessageId: voiceResult2.id }
+                : m,
+            ),
+          );
+          queryClient.invalidateQueries({ queryKey: ["chat", chat.id] });
         } catch {
           setPendingMessages((prev) =>
             prev.map((m) =>
@@ -2842,9 +2907,10 @@ function PendingBubble({
             <button
               type="button"
               onClick={onRetry}
-              className="text-red-400 text-[10px] font-medium mt-0.5 mr-2"
+              className="mt-0.5 mr-2 flex items-center justify-center"
+              title={errorLabel}
             >
-              {errorLabel}
+              <AlertCircle size={14} className="text-red-500" />
             </button>
           )}
         </div>
@@ -2887,9 +2953,10 @@ function PendingBubble({
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="text-red-300 text-[10px] font-medium"
+                      className="flex items-center justify-center"
+                      title={errorLabel}
                     >
-                      {errorLabel}
+                      <AlertCircle size={13} className="text-red-400" />
                     </button>
                   ) : (
                     <Loader2 size={11} className="animate-spin text-white/80" />
@@ -2915,9 +2982,10 @@ function PendingBubble({
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="text-red-300 text-[10px] font-medium bg-black/60 rounded-full px-2 py-0.5"
+                      className="flex items-center justify-center"
+                      title={errorLabel}
                     >
-                      {errorLabel}
+                      <AlertCircle size={22} className="text-red-400" />
                     </button>
                   </div>
                 ) : isVideoUploading ? (
@@ -2941,9 +3009,10 @@ function PendingBubble({
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="text-red-300 text-[10px] font-medium hover:text-red-100"
+                      className="flex items-center justify-center"
+                      title={errorLabel}
                     >
-                      {errorLabel}
+                      <AlertCircle size={13} className="text-red-500" />
                     </button>
                   ) : (
                     <Loader2 size={11} className="animate-spin text-white/60" />
