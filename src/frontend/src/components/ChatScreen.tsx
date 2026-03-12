@@ -2443,21 +2443,46 @@ function MentionRow({
 // ── Mention Highlight Renderer ────────────────────────────────────────────────
 
 function renderWithMentions(text: string): React.ReactNode {
-  const parts = text.split(/(@\w+)/g);
-  if (parts.length <= 1) return text;
-  return parts.map((part, i) => {
-    if (/^@\w+$/.test(part)) {
-      return (
-        <span
-          key={`mention-${i}-${part}`}
-          className="text-blue-400 font-medium"
+  const tokenPattern = /(@\w+)|(https?:\/\/[^\s]+)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let idx = 0;
+  match = tokenPattern.exec(text);
+  while (match !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1]) {
+      parts.push(
+        <span key={`mention-${idx}`} className="text-blue-400 font-medium">
+          {match[1]}
+        </span>,
+      );
+    } else if (match[2]) {
+      parts.push(
+        <a
+          key={`url-${idx}`}
+          href={match[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-300 underline underline-offset-2 break-all"
+          onClick={(e) => e.stopPropagation()}
         >
-          {part}
-        </span>
+          {match[2]}
+        </a>,
       );
     }
-    return part;
-  });
+    lastIndex = match.index + match[0].length;
+    idx++;
+    match = tokenPattern.exec(text);
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  if (parts.length === 0) return text;
+  if (parts.length === 1 && typeof parts[0] === "string") return parts[0];
+  return <>{parts}</>;
 }
 
 // ── Message Bubble ────────────────────────────────────────────────────────────
@@ -3003,7 +3028,7 @@ function PendingBubble({
                   className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-10"
                   style={{ fontSize: FONT_SIZES[chatFontSize] }}
                 >
-                  {message.content}
+                  {renderWithMentions(message.content)}
                 </p>
                 <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">
                   {message.failed ? (
