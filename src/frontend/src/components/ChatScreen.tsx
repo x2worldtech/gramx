@@ -2886,23 +2886,13 @@ function PendingBubble({
   if (message.isVoice && message.voiceBlobUrl) {
     return (
       <div className="flex justify-end mt-0.5">
-        <div className="max-w-[75%] flex flex-col items-end opacity-80">
+        <div className="max-w-[75%] flex flex-col items-end">
           <VoiceMessageBubble
             blobUrl={message.voiceBlobUrl}
             duration={message.voiceDuration ?? 0}
             isOwn
           />
-          {message.pending && (
-            <div className="flex items-center gap-1 mt-0.5 mr-2">
-              <Loader2
-                size={10}
-                className="animate-spin text-muted-foreground"
-              />
-              <span className="text-[10px] text-muted-foreground">
-                Sending...
-              </span>
-            </div>
-          )}
+
           {message.failed && (
             <button
               type="button"
@@ -2931,9 +2921,7 @@ function PendingBubble({
   return (
     <div className="flex justify-end mt-0.5">
       <div className="max-w-[75%] flex flex-col items-end">
-        <div
-          className={`bubble-out opacity-80 ${isMedia ? "!p-0 overflow-hidden" : ""}`}
-        >
+        <div className={`bubble-out ${isMedia ? "!p-0 overflow-hidden" : ""}`}>
           <div className={isMedia ? "relative" : "px-3 py-2 relative"}>
             {message.forwardedFrom && (
               <div className="flex items-center gap-1 mb-1 text-white/70 px-3 pt-2">
@@ -2948,8 +2936,8 @@ function PendingBubble({
                   alt="Attachment"
                   className="rounded-2xl max-w-[220px] max-h-[280px] object-cover block"
                 />
-                <span className="absolute bottom-2 right-2 text-white/90 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1">
-                  {message.failed ? (
+                {message.failed && (
+                  <span className="absolute bottom-2 right-2 text-white/90 text-[10px] font-medium bg-black/40 rounded-full px-1.5 py-0.5 flex items-center gap-1">
                     <button
                       type="button"
                       onClick={onRetry}
@@ -2958,10 +2946,8 @@ function PendingBubble({
                     >
                       <AlertCircle size={13} className="text-red-400" />
                     </button>
-                  ) : (
-                    <Loader2 size={11} className="animate-spin text-white/80" />
-                  )}
-                </span>
+                  </span>
+                )}
               </div>
             ) : videoPreviewUrl ? (
               <div
@@ -3004,8 +2990,8 @@ function PendingBubble({
                 <p className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-14">
                   {message.content}
                 </p>
-                <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">
-                  {message.failed ? (
+                {message.failed && (
+                  <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">
                     <button
                       type="button"
                       onClick={onRetry}
@@ -3014,10 +3000,8 @@ function PendingBubble({
                     >
                       <AlertCircle size={13} className="text-red-500" />
                     </button>
-                  ) : (
-                    <Loader2 size={11} className="animate-spin text-white/60" />
-                  )}
-                </span>
+                  </span>
+                )}
               </>
             )}
           </div>
