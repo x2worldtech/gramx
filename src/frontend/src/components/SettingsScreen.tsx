@@ -25,6 +25,7 @@ import {
   Palette,
   Sun,
   Trash2,
+  Type,
   User,
 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -43,7 +44,20 @@ interface SettingsScreenProps {
   onLogout: () => void;
 }
 
-type SettingsView = "overview" | "profile" | "appearance" | "language";
+type SettingsView =
+  | "overview"
+  | "profile"
+  | "appearance"
+  | "language"
+  | "textsize";
+
+const FONT_SIZES = [14, 15, 16, 17, 19, 23, 26];
+
+function getFontSizeLabel(idx: number): string {
+  const pt = FONT_SIZES[idx];
+  if (pt === 17) return "17pt";
+  return `${pt}pt / 17pt`;
+}
 
 const LANGUAGES: {
   code: AppLanguage;
@@ -96,6 +110,8 @@ export default function SettingsScreen({
     setDisplayName,
     setDarkMode,
     setLanguage,
+    chatFontSize,
+    setChatFontSize,
     displayName,
   } = useSettings();
 
@@ -135,6 +151,7 @@ export default function SettingsScreen({
 
   // Keep a ref to measure if navigating forward or back
   const prevView = useRef<SettingsView>("overview");
+  const [tempFontSize, setTempFontSize] = useState<number>(chatFontSize);
 
   const navigateTo = (view: SettingsView) => {
     prevView.current = activeView;
@@ -1181,6 +1198,236 @@ export default function SettingsScreen({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Text Size Row */}
+          <SectionHeader label="Font" />
+          <div className="mx-4 bg-card rounded-2xl border border-border/60 overflow-hidden mb-6 shadow-sm">
+            <button
+              type="button"
+              data-ocid="settings.textsize_row.button"
+              onClick={() => {
+                setTempFontSize(chatFontSize);
+                navigateTo("textsize");
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-accent/50 transition-colors"
+            >
+              <span className="w-9 h-9 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
+                <Type size={18} className="text-white" strokeWidth={2} />
+              </span>
+              <span className="flex-1 text-left text-sm font-medium text-foreground">
+                {t("settings_text_size")}
+              </span>
+              <span className="text-xs text-muted-foreground mr-1">
+                {getFontSizeLabel(chatFontSize)}
+              </span>
+              <ChevronRight
+                size={16}
+                className="text-muted-foreground/60"
+                strokeWidth={2.5}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── TEXT SIZE SUB-SCREEN ─────────────────────────────── */}
+      <div
+        data-ocid="settings.textsize.page"
+        className="absolute inset-0 flex flex-col bg-background"
+        style={{ ...getSlideStyle("textsize"), ...slideTransition }}
+      >
+        {/* Header */}
+        <div className="ios-navbar safe-top px-2 pt-1 pb-3 flex-shrink-0 z-10">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              data-ocid="settings.textsize_back.button"
+              onClick={navigateBack}
+              className="flex items-center gap-0.5 text-primary px-2 py-2 active:opacity-60 transition-opacity"
+            >
+              <ChevronLeft size={26} strokeWidth={2} />
+              <span className="text-base font-normal">
+                {t("settings_appearance")}
+              </span>
+            </button>
+            <span className="text-base font-semibold text-foreground ml-2">
+              {t("settings_text_size")}
+            </span>
+          </div>
+        </div>
+
+        {/* Preview Chat Area */}
+        <div className="flex-1 overflow-hidden relative">
+          {/* Chat background */}
+          <div
+            className={`absolute inset-0 ${CHAT_BACKGROUNDS[chatBackground]?.className ?? ""}`}
+            style={CHAT_BACKGROUNDS[chatBackground]?.previewStyle ?? {}}
+          />
+          {/* Messages */}
+          <div className="absolute inset-0 flex flex-col justify-end p-4 gap-2">
+            {/* Date divider */}
+            <div className="flex items-center justify-center mb-2">
+              <span className="bg-black/20 text-white text-xs px-3 py-0.5 rounded-full">
+                Today
+              </span>
+            </div>
+
+            {/* Incoming message 1 */}
+            <div className="flex justify-start">
+              <div
+                className="max-w-[75%] px-3 py-2 rounded-2xl rounded-tl-sm shadow-sm"
+                style={
+                  BUBBLE_THEMES[bubbleTheme]?.inStyle ?? {
+                    background: "white",
+                    color: "black",
+                  }
+                }
+              >
+                <p
+                  style={{
+                    fontSize: `${FONT_SIZES[tempFontSize]}px`,
+                    lineHeight: 1.4,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  Why did Chuck Norris cross the road? Because no one tells
+                  Chuck Norris which side to cross on.
+                </p>
+                <p className="text-[10px] opacity-60 text-right mt-1">12:41</p>
+              </div>
+            </div>
+
+            {/* Outgoing message */}
+            <div className="flex justify-end">
+              <div
+                className="max-w-[75%] px-3 py-2 rounded-2xl rounded-tr-sm shadow-sm"
+                style={
+                  BUBBLE_THEMES[bubbleTheme]?.outStyle ?? {
+                    background: "#2196f3",
+                    color: "white",
+                  }
+                }
+              >
+                <p
+                  style={{
+                    fontSize: `${FONT_SIZES[tempFontSize]}px`,
+                    lineHeight: 1.4,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  Haha, that&apos;s so true! 😂
+                </p>
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <p className="text-[10px] opacity-60">12:41</p>
+                  <span className="text-[10px] opacity-70">✓✓</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Incoming message 2 */}
+            <div className="flex justify-start">
+              <div
+                className="max-w-[75%] px-3 py-2 rounded-2xl rounded-tl-sm shadow-sm"
+                style={
+                  BUBBLE_THEMES[bubbleTheme]?.inStyle ?? {
+                    background: "white",
+                    color: "black",
+                  }
+                }
+              >
+                <p
+                  style={{
+                    fontSize: `${FONT_SIZES[tempFontSize]}px`,
+                    lineHeight: 1.4,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  Chuck Norris doesn&apos;t sleep. He waits.
+                </p>
+                <p className="text-[10px] opacity-60 text-right mt-1">12:42</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom slider panel */}
+        <div className="flex-shrink-0 bg-card border-t border-border/60 px-5 pt-4 pb-6 safe-bottom">
+          {/* Slider with A labels */}
+          <div className="flex items-center gap-3 mb-5">
+            <span
+              className="text-muted-foreground font-medium"
+              style={{ fontSize: "13px" }}
+            >
+              A
+            </span>
+            <div className="flex-1 relative">
+              {/* Track */}
+              <div className="relative h-1.5 bg-border rounded-full">
+                {/* Filled track */}
+                <div
+                  className="absolute left-0 top-0 h-full bg-primary rounded-full transition-all"
+                  style={{ width: `${(tempFontSize / 6) * 100}%` }}
+                />
+                {/* Tick marks */}
+                <div className="absolute inset-0 flex items-center justify-between px-0">
+                  {FONT_SIZES.map((size, i) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setTempFontSize(i)}
+                      className="relative flex items-center justify-center"
+                      style={{ width: "20px", height: "20px" }}
+                    >
+                      <span
+                        className={`block rounded-full transition-all ${
+                          i === tempFontSize
+                            ? "w-5 h-5 bg-primary border-2 border-white shadow-md"
+                            : "w-2 h-2 bg-border"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <span
+              className="text-foreground font-bold"
+              style={{ fontSize: "22px" }}
+            >
+              A
+            </span>
+          </div>
+
+          {/* Size label */}
+          <p className="text-center text-sm text-muted-foreground mb-4">
+            {getFontSizeLabel(tempFontSize)}
+          </p>
+
+          {/* Cancel / Set buttons */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              data-ocid="settings.textsize_cancel.button"
+              onClick={() => {
+                setTempFontSize(chatFontSize);
+                navigateBack();
+              }}
+              className="flex-1 py-3 rounded-2xl border border-border/60 bg-background text-foreground text-sm font-medium active:opacity-70 transition-opacity"
+            >
+              {t("settings_cancel")}
+            </button>
+            <button
+              type="button"
+              data-ocid="settings.textsize_set.button"
+              onClick={() => {
+                setChatFontSize(tempFontSize);
+                navigateBack();
+              }}
+              className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-semibold active:opacity-70 transition-opacity"
+            >
+              Set
+            </button>
           </div>
         </div>
       </div>

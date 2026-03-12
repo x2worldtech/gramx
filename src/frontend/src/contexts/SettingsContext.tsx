@@ -33,6 +33,8 @@ interface SettingsContextValue {
   setChatBackground: (idx: number) => void;
   setBubbleTheme: (idx: number) => void;
   setDarkMode: (v: boolean) => void;
+  chatFontSize: number;
+  setChatFontSize: (idx: number) => void;
   setLanguage: (lang: AppLanguage) => void;
 }
 
@@ -45,6 +47,7 @@ const LS_CHAT_BG = "tg_chatBg";
 const LS_BUBBLE_THEME = "tg_bubbleTheme";
 const LS_DARK_MODE = "tg_darkMode";
 const LS_LANGUAGE = "tg_language";
+const LS_CHAT_FONT_SIZE = "tg_chatFontSize";
 
 function readLS<T>(key: string, fallback: T): T {
   try {
@@ -76,6 +79,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   );
   const [language, setLanguageState] = useState<AppLanguage>(() =>
     readLS<AppLanguage>(LS_LANGUAGE, "en"),
+  );
+  const [chatFontSize, setChatFontSizeState] = useState<number>(() =>
+    readLS(LS_CHAT_FONT_SIZE, 2),
   );
 
   // Apply dark mode class on mount
@@ -122,6 +128,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", v);
   }, []);
 
+  const setChatFontSize = useCallback((idx: number) => {
+    setChatFontSizeState(idx);
+    localStorage.setItem(LS_CHAT_FONT_SIZE, JSON.stringify(idx));
+  }, []);
+
   const setLanguage = useCallback((lang: AppLanguage) => {
     setLanguageState(lang);
     localStorage.setItem(LS_LANGUAGE, JSON.stringify(lang));
@@ -145,6 +156,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setChatBackground,
         setBubbleTheme,
         setDarkMode,
+        chatFontSize,
+        setChatFontSize,
         setLanguage,
       }}
     >

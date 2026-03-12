@@ -154,6 +154,7 @@ const en = {
 
   // Settings - Language
   settings_language_title: "Language",
+  settings_text_size: "Text Size",
 
   // Settings - Profile Edit mode
   settings_edit: "Edit",
@@ -347,6 +348,7 @@ const de: typeof en = {
   settings_bubble_ember: "Glut",
 
   settings_language_title: "Language",
+  settings_text_size: "Textgröße",
 
   settings_edit: "Bearbeiten",
   settings_done: "Fertig",
@@ -537,6 +539,7 @@ const es: typeof en = {
   settings_bubble_ember: "Brasa",
 
   settings_language_title: "Idioma",
+  settings_text_size: "Tamaño de texto",
 
   settings_edit: "Editar",
   settings_done: "Listo",
@@ -726,6 +729,7 @@ const ar: typeof en = {
   settings_bubble_ember: "جمر",
 
   settings_language_title: "اللغة",
+  settings_text_size: "حجم الخط",
 
   settings_edit: "تعديل",
   settings_done: "تم",
@@ -914,6 +918,7 @@ const zh: typeof en = {
   settings_bubble_ember: "余烬",
 
   settings_language_title: "语言",
+  settings_text_size: "文字大小",
 
   settings_edit: "编辑",
   settings_done: "完成",
@@ -1105,6 +1110,7 @@ const fr: typeof en = {
   settings_bubble_ember: "Braise",
 
   settings_language_title: "Langue",
+  settings_text_size: "Taille du texte",
 
   settings_edit: "Modifier",
   settings_done: "Terminé",
@@ -1296,6 +1302,7 @@ const ru: typeof en = {
   settings_bubble_ember: "Жар",
 
   settings_language_title: "Язык",
+  settings_text_size: "Размер текста",
 
   settings_edit: "Изменить",
   settings_done: "Готово",
@@ -1485,6 +1492,7 @@ const it: typeof en = {
   settings_bubble_ember: "Brace",
 
   settings_language_title: "Lingua",
+  settings_text_size: "Dimensione testo",
 
   settings_edit: "Modifica",
   settings_done: "Fatto",
@@ -1673,6 +1681,7 @@ const ko: typeof en = {
   settings_bubble_ember: "불씨",
 
   settings_language_title: "언어",
+  settings_text_size: "텍스트 크기",
 
   settings_edit: "편집",
   settings_done: "완료",

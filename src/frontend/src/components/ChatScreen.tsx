@@ -25,6 +25,8 @@ import ReactDOM from "react-dom";
 import type { Chat, Message, User } from "../backend.d";
 import { ChatType } from "../backend.d";
 import { useSettings } from "../contexts/SettingsContext";
+
+const FONT_SIZES = [14, 15, 16, 17, 19, 23, 26];
 import { useAvatarImages } from "../hooks/useAvatarImages";
 import { useAvatarImage, useChat, useSendMessage } from "../hooks/useQueries";
 import type { TranslationKey } from "../i18n/translations";
@@ -2108,6 +2110,7 @@ function MessageContextMenu({
   onDeleteCancel,
   t,
 }: MessageContextMenuProps) {
+  const { chatFontSize } = useSettings();
   const emojis = showAllEmojis ? ALL_EMOJIS : QUICK_EMOJIS;
   const time = formatTime(contextMenu.message.timestamp);
 
@@ -2182,7 +2185,10 @@ function MessageContextMenu({
             style={{ width: "100%", boxSizing: "border-box" }}
           >
             <div className="px-3 py-2 relative">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-10">
+              <p
+                className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-10"
+                style={{ fontSize: FONT_SIZES[chatFontSize] }}
+              >
                 {contextMenu.message.content}
               </p>
               <span
@@ -2483,6 +2489,7 @@ function MessageBubble({
   onMediaTap,
   onSenderClick,
 }: MessageBubbleProps) {
+  const { chatFontSize } = useSettings();
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const didLongPress = useRef(false);
@@ -2620,6 +2627,7 @@ function MessageBubble({
                 {isDeleted ? (
                   <p
                     className={`text-sm italic pr-10 ${isOwn ? "text-white/60" : "text-muted-foreground"}`}
+                    style={{ fontSize: FONT_SIZES[chatFontSize] }}
                   >
                     🗑 Message deleted
                   </p>
@@ -2729,7 +2737,10 @@ function MessageBubble({
                       );
                     }
                     return (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-10">
+                      <p
+                        className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-10"
+                        style={{ fontSize: FONT_SIZES[chatFontSize] }}
+                      >
                         {renderWithMentions(displayContent)}
                       </p>
                     );
@@ -2883,6 +2894,7 @@ function PendingBubble({
   onCancelUpload,
   errorLabel,
 }: PendingBubbleProps) {
+  const { chatFontSize } = useSettings();
   if (message.isVoice && message.voiceBlobUrl) {
     return (
       <div className="flex justify-end mt-0.5">
@@ -2987,11 +2999,14 @@ function PendingBubble({
               </div>
             ) : (
               <>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-14">
+                <p
+                  className="text-sm leading-relaxed whitespace-pre-wrap break-all pr-10"
+                  style={{ fontSize: FONT_SIZES[chatFontSize] }}
+                >
                   {message.content}
                 </p>
-                {message.failed && (
-                  <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">
+                <span className="msg-time absolute bottom-2 right-2 text-white/70 flex items-center gap-1">
+                  {message.failed ? (
                     <button
                       type="button"
                       onClick={onRetry}
@@ -3000,8 +3015,9 @@ function PendingBubble({
                     >
                       <AlertCircle size={13} className="text-red-500" />
                     </button>
-                  </span>
-                )}
+                  ) : null}
+                  {formatTime(message.timestamp)}
+                </span>
               </>
             )}
           </div>
