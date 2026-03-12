@@ -1069,7 +1069,7 @@ export default function SettingsScreen({
           {/* Chat background */}
           <SectionHeader label={t("settings_chat_bg_label")} />
           <div className="mx-4 mb-6">
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto pb-2 pt-2 scrollbar-hide">
               {CHAT_BACKGROUNDS.map((bg, idx) => (
                 <button
                   key={bg.labelKey}
@@ -1082,7 +1082,7 @@ export default function SettingsScreen({
                   <div
                     className={`relative w-16 h-24 rounded-2xl overflow-hidden border-2 transition-all ${
                       chatBackground === idx
-                        ? "border-primary shadow-md scale-105"
+                        ? "border-primary shadow-md ring-2 ring-primary ring-offset-0"
                         : "border-border/40 active:scale-95"
                     }`}
                   >
@@ -1121,7 +1121,7 @@ export default function SettingsScreen({
           {/* Bubble Color */}
           <SectionHeader label={t("settings_bubble_color_label")} />
           <div className="mx-4 mb-6">
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto pb-2 pt-2 scrollbar-hide">
               {BUBBLE_THEMES.map((theme, idx) => (
                 <button
                   key={theme.labelKey}
@@ -1134,7 +1134,7 @@ export default function SettingsScreen({
                   <div
                     className={`relative w-16 h-24 rounded-2xl overflow-hidden border-2 transition-all bg-[oklch(0.95_0.01_235)] ${
                       bubbleTheme === idx
-                        ? "border-primary shadow-md scale-105"
+                        ? "border-primary shadow-md ring-2 ring-primary ring-offset-0"
                         : "border-border/40 active:scale-95"
                     }`}
                   >
