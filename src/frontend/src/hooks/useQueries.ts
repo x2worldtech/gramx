@@ -15,18 +15,22 @@ export function useMyUser() {
     queryFn: async () => {
       if (!actor) return undefined as unknown as null;
       try {
-        // getCallerUserProfile returns null if not registered (no role required)
-        const profile = await actor.getCallerUserProfile();
-        if (profile === null || profile === undefined) return null;
-        // Build a User object from profile + identity principal
-        return {
-          principal: identity!.getPrincipal(),
-          name: profile.name,
-          username: profile.username,
-        } as User;
-      } catch {
-        // Network error or not registered → treat as null (not registered)
-        return null;
+        // getMyUser() returns the full User object (with principal)
+        // Throws if not registered → we catch and return null
+        return await actor.getMyUser();
+      } catch (e) {
+        const msg = String(e);
+        // User is definitively not registered
+        if (
+          msg.includes("Unauthorized") ||
+          msg.includes("not registered") ||
+          msg.includes("does not exist") ||
+          msg.includes("Only registered")
+        ) {
+          return null;
+        }
+        // Network or other transient error → throw so React Query retries
+        throw e;
       }
     },
     enabled: !!actor && principalId !== "anonymous",
@@ -53,7 +57,7 @@ export function useRegisterUser() {
       const principalId = identity?.getPrincipal().toString() ?? "anonymous";
       // Immediately set the user in cache so the app transitions to main view
       queryClient.setQueryData(["myUser", principalId], user);
-      queryClient.invalidateQueries({ queryKey: ["myChats", principalId] });
+      queryClient.invalidateQueries({ queryKey: ["myChats"] });
     },
   });
 }
@@ -123,7 +127,13 @@ export function useCreateDirectChat() {
       if (!actor) throw new Error("No actor");
       return actor.createDirectChat(otherUser);
     },
-    onSuccess: () => {
+    onSuccess: (newChat) => {
+      // Immediately add the chat to cache so it shows up without waiting for refetch
+      queryClient.setQueryData<Chat[]>(["myChats"], (old) => {
+        if (!old) return [newChat];
+        const exists = old.find((c) => c.id === newChat.id);
+        return exists ? old : [newChat, ...old];
+      });
       queryClient.invalidateQueries({ queryKey: ["myChats"] });
     },
   });
@@ -140,7 +150,13 @@ export function useCreateGroupChat() {
       if (!actor) throw new Error("No actor");
       return actor.createGroupChat(name, participants);
     },
-    onSuccess: () => {
+    onSuccess: (newChat) => {
+      // Immediately add the chat to cache so it shows up without waiting for refetch
+      queryClient.setQueryData<Chat[]>(["myChats"], (old) => {
+        if (!old) return [newChat];
+        const exists = old.find((c) => c.id === newChat.id);
+        return exists ? old : [newChat, ...old];
+      });
       queryClient.invalidateQueries({ queryKey: ["myChats"] });
     },
   });
