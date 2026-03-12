@@ -28,7 +28,7 @@ import {
   Type,
   User,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { User as UserType } from "../backend.d";
 import { type AppLanguage, useSettings } from "../contexts/SettingsContext";
 import { useActor } from "../hooks/useActor";
@@ -36,6 +36,112 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useRemoveAvatarImage, useSetAvatarImage } from "../hooks/useQueries";
 import { useTranslation } from "../i18n/useTranslation";
 import { getInitials } from "../utils/avatarUtils";
+
+function FontSizeSlider({
+  value,
+  onChange,
+}: { value: number; onChange: (v: number) => void }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+
+  const getIndexFromX = useCallback(
+    (clientX: number) => {
+      const track = trackRef.current;
+      if (!track) return value;
+      const rect = track.getBoundingClientRect();
+      const ratio = Math.max(
+        0,
+        Math.min(1, (clientX - rect.left) / rect.width),
+      );
+      return Math.round(ratio * (FONT_SIZES.length - 1));
+    },
+    [value],
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      isDragging.current = true;
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      onChange(getIndexFromX(e.clientX));
+    },
+    [getIndexFromX, onChange],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging.current) return;
+      onChange(getIndexFromX(e.clientX));
+    },
+    [getIndexFromX, onChange],
+  );
+
+  const handlePointerUp = useCallback(() => {
+    isDragging.current = false;
+  }, []);
+
+  const fillPercent = (value / (FONT_SIZES.length - 1)) * 100;
+
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <span
+        className="text-muted-foreground font-medium"
+        style={{ fontSize: "13px" }}
+      >
+        A
+      </span>
+      <div
+        ref={trackRef}
+        className="flex-1 relative py-3 cursor-pointer select-none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        {/* Track background */}
+        <div className="relative h-1 bg-gray-300 dark:bg-white/20 rounded-full">
+          {/* Filled track */}
+          <div
+            className="absolute left-0 top-0 h-full bg-primary rounded-full"
+            style={{ width: `${fillPercent}%` }}
+          />
+        </div>
+        {/* Tick dots */}
+        <div
+          className="absolute inset-0 flex items-center"
+          style={{ paddingLeft: 0, paddingRight: 0 }}
+        >
+          {FONT_SIZES.map((_, i) => {
+            const pos = (i / (FONT_SIZES.length - 1)) * 100;
+            const isActive = i === value;
+            const isFilled = i < value;
+            return (
+              <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: stable font size index
+                key={i}
+                className="absolute"
+                style={{ left: `${pos}%`, transform: "translateX(-50%)" }}
+              >
+                {isActive ? (
+                  <div
+                    className="w-5 h-5 rounded-full bg-primary shadow-lg border-2 border-white dark:border-white"
+                    style={{ marginTop: 0 }}
+                  />
+                ) : (
+                  <div
+                    className={`w-2 h-2 rounded-full ${isFilled ? "bg-primary" : "bg-gray-400 dark:bg-white dark:opacity-80"}`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <span className="text-foreground font-bold" style={{ fontSize: "22px" }}>
+        A
+      </span>
+    </div>
+  );
+}
 
 interface SettingsScreenProps {
   myUser: UserType | null;
@@ -1354,50 +1460,7 @@ export default function SettingsScreen({
         {/* Bottom slider panel */}
         <div className="flex-shrink-0 bg-card border-t border-border/60 px-5 pt-4 pb-6 safe-bottom">
           {/* Slider with A labels */}
-          <div className="flex items-center gap-3 mb-5">
-            <span
-              className="text-muted-foreground font-medium"
-              style={{ fontSize: "13px" }}
-            >
-              A
-            </span>
-            <div className="flex-1 relative">
-              {/* Track */}
-              <div className="relative h-1.5 bg-border rounded-full">
-                {/* Filled track */}
-                <div
-                  className="absolute left-0 top-0 h-full bg-primary rounded-full transition-all"
-                  style={{ width: `${(tempFontSize / 6) * 100}%` }}
-                />
-                {/* Tick marks */}
-                <div className="absolute inset-0 flex items-center justify-between px-0">
-                  {FONT_SIZES.map((size, i) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setTempFontSize(i)}
-                      className="relative flex items-center justify-center"
-                      style={{ width: "20px", height: "20px" }}
-                    >
-                      <span
-                        className={`block rounded-full transition-all ${
-                          i === tempFontSize
-                            ? "w-5 h-5 bg-primary border-2 border-white shadow-md"
-                            : "w-2 h-2 bg-border"
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <span
-              className="text-foreground font-bold"
-              style={{ fontSize: "22px" }}
-            >
-              A
-            </span>
-          </div>
+          <FontSizeSlider value={tempFontSize} onChange={setTempFontSize} />
 
           {/* Size label */}
           <p className="text-center text-sm text-muted-foreground mb-4">
