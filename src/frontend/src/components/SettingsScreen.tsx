@@ -1069,7 +1069,7 @@ export default function SettingsScreen({
           {/* Chat background */}
           <SectionHeader label={t("settings_chat_bg_label")} />
           <div className="mx-4 mb-6">
-            <div className="flex gap-3 overflow-x-auto pb-2 pt-2 scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto pb-2 pt-2 pl-1 scrollbar-hide">
               {CHAT_BACKGROUNDS.map((bg, idx) => (
                 <button
                   key={bg.labelKey}
@@ -1121,7 +1121,7 @@ export default function SettingsScreen({
           {/* Bubble Color */}
           <SectionHeader label={t("settings_bubble_color_label")} />
           <div className="mx-4 mb-6">
-            <div className="flex gap-3 overflow-x-auto pb-2 pt-2 scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto pb-2 pt-2 pl-1 scrollbar-hide">
               {BUBBLE_THEMES.map((theme, idx) => (
                 <button
                   key={theme.labelKey}
