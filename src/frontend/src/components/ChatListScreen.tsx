@@ -462,6 +462,18 @@ export default function ChatListScreen({
                         onSwipeDelete={() => handleSwipeDelete(chat.id)}
                         onSwipeArchive={() => handleSwipeArchive(chat.id)}
                         onSwipePin={() => handleSwipePin(chat.id)}
+                        onSwipeRead={() => {
+                          setActiveSwipeChatId(null);
+                          if (principalId) {
+                            markChatAsRead(
+                              chat.id,
+                              chat.messages ?? [],
+                              principalId,
+                            );
+                            forceUpdate();
+                          }
+                          onOpenChat(chat);
+                        }}
                         isActive={activeSwipeChatId === chat.id}
                         onActivate={() => setActiveSwipeChatId(chat.id)}
                         onDeactivate={() => setActiveSwipeChatId(null)}
@@ -756,6 +768,7 @@ interface SwipeableChatRowProps {
   onSwipeDelete: () => void;
   onSwipeArchive: () => void;
   onSwipePin: () => void;
+  onSwipeRead: () => void;
   isActive: boolean;
   onActivate: () => void;
   onDeactivate: () => void;
@@ -779,6 +792,7 @@ function SwipeableChatRow({
   onSwipeDelete,
   onSwipeArchive,
   onSwipePin,
+  onSwipeRead,
   isActive,
   onActivate,
   onDeactivate,
@@ -787,14 +801,16 @@ function SwipeableChatRow({
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
-  const startTranslateXRef = useRef(0); // translateX at the moment the touch begins
+  const startTranslateXRef = useRef(0);
   const directionLockedRef = useRef<"horizontal" | "vertical" | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const ACTION_THRESHOLD = 50;
   const translateXRef = useRef(0);
-  const LEFT_REVEAL = 160; // width of delete + archive buttons
-  const RIGHT_REVEAL = 80; // width of pin button
+  const LEFT_REVEAL = 160; // Delete + Archive buttons
+  const RIGHT_REVEAL = 160; // Read + Pin buttons
+  const AUTO_ACTION_THRESHOLD =
+    typeof window !== "undefined" ? window.innerWidth * 0.6 : 240;
 
   const canPin = !isPinned && pinnedCount >= MAX_PINNED;
 
@@ -809,11 +825,52 @@ function SwipeableChatRow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive]);
 
+  // Dynamic push-over widths computed from current translateX
+  const leftDrag = Math.max(0, -translateX);
+  const rightDrag = Math.max(0, translateX);
+
+  // Left side: Delete shrinks, Archive expands to fill screen edge at 60%+
+  const leftContainerWidth = isDragging
+    ? Math.max(LEFT_REVEAL, leftDrag)
+    : LEFT_REVEAL;
+  const archivePushProgress = isDragging
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          (leftDrag - LEFT_REVEAL) /
+            Math.max(1, AUTO_ACTION_THRESHOLD - LEFT_REVEAL),
+        ),
+      )
+    : 0;
+  const deleteBtnWidth = Math.round(80 * (1 - archivePushProgress)); // 80 → 0
+  const archiveBtnWidth = isDragging
+    ? Math.max(80, leftContainerWidth - deleteBtnWidth)
+    : 80;
+
+  // Right side: Pin shrinks, Read expands to fill screen edge at 60%+
+  const rightContainerWidth = isDragging
+    ? Math.max(RIGHT_REVEAL, rightDrag)
+    : RIGHT_REVEAL;
+  const readPushProgress = isDragging
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          (rightDrag - RIGHT_REVEAL) /
+            Math.max(1, AUTO_ACTION_THRESHOLD - RIGHT_REVEAL),
+        ),
+      )
+    : 0;
+  const pinBtnWidth = Math.round(80 * (1 - readPushProgress)); // 80 → 0
+  const readBtnWidth = isDragging
+    ? Math.max(80, rightContainerWidth - pinBtnWidth)
+    : 80;
+
   function onTouchStart(e: React.TouchEvent) {
     if (editMode) return;
     startXRef.current = e.touches[0].clientX;
     startYRef.current = e.touches[0].clientY;
-    // CRITICAL: capture current position so re-swipe continues from where it left off
     startTranslateXRef.current = translateXRef.current;
     directionLockedRef.current = null;
     setIsDragging(true);
@@ -839,13 +896,11 @@ function SwipeableChatRow({
 
     if (directionLockedRef.current !== "horizontal") return;
 
-    // Prevent scroll when swiping horizontally
     e.preventDefault();
 
-    // Add delta to the position the row was at when the touch started
     const rawX = startTranslateXRef.current + dx;
-    const minX = -LEFT_REVEAL - 20;
-    const maxX = isArchived ? 0 : RIGHT_REVEAL + 20;
+    const minX = -(AUTO_ACTION_THRESHOLD + 20);
+    const maxX = isArchived ? 0 : AUTO_ACTION_THRESHOLD + 20;
     const clamped = Math.max(minX, Math.min(maxX, rawX));
     setTranslateX(clamped);
   }
@@ -857,14 +912,28 @@ function SwipeableChatRow({
 
     const current = translateXRef.current;
 
+    // Auto-action at 60%+ swipe
+    if (current < -AUTO_ACTION_THRESHOLD) {
+      // Auto-archive
+      setTranslateX(0);
+      onDeactivate();
+      onSwipeArchive();
+      return;
+    }
+    if (current > AUTO_ACTION_THRESHOLD && !isArchived) {
+      // Auto-read
+      setTranslateX(0);
+      onDeactivate();
+      onSwipeRead();
+      return;
+    }
+
+    // Normal snap behavior
     if (current < -ACTION_THRESHOLD) {
-      // Snap to reveal left actions
       setTranslateX(-LEFT_REVEAL);
     } else if (current > ACTION_THRESHOLD && !isArchived) {
-      // Snap to reveal right pin action
       setTranslateX(RIGHT_REVEAL);
     } else {
-      // Snap back
       setTranslateX(0);
       onDeactivate();
     }
@@ -877,7 +946,6 @@ function SwipeableChatRow({
 
   function handleChatRowClick() {
     if (translateX !== 0) {
-      // Row is swiped open — close it instead of opening the chat
       closeSwipe();
     } else {
       onClick();
@@ -895,7 +963,6 @@ function SwipeableChatRow({
             : "pan-y",
       }}
     >
-      {/* Single translating strip: chat row + buttons attached to its sides */}
       <div
         style={{
           transform: `translateX(${translateX}px)`,
@@ -909,7 +976,7 @@ function SwipeableChatRow({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Pin button — attached to LEFT side of the row (visible when swiping right) */}
+        {/* Right-swipe buttons: Read + Pin — attached to LEFT side (visible when swiping right) */}
         {!isArchived && (
           <div
             style={{
@@ -917,11 +984,32 @@ function SwipeableChatRow({
               right: "100%",
               top: 0,
               bottom: 0,
-              width: RIGHT_REVEAL,
+              width: rightContainerWidth,
               display: "flex",
+              overflow: "visible",
             }}
             aria-hidden="true"
           >
+            {/* Read button (leftmost) */}
+            <button
+              type="button"
+              onClick={() => {
+                onSwipeRead();
+                closeSwipe();
+              }}
+              style={{
+                width: isDragging ? readBtnWidth : 80,
+                flexShrink: 0,
+                transition: isDragging
+                  ? "none"
+                  : "width 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",
+              }}
+              className="h-full flex flex-col items-center justify-center gap-1 bg-gray-500 overflow-hidden"
+            >
+              <MessageCircle size={20} className="text-white" />
+              <span className="text-white text-[11px] font-semibold">Read</span>
+            </button>
+            {/* Pin button (rightmost) */}
             <button
               type="button"
               onClick={() => {
@@ -930,16 +1018,13 @@ function SwipeableChatRow({
               }}
               disabled={canPin}
               style={{
-                transform: isDragging
-                  ? "none"
-                  : translateX >= RIGHT_REVEAL - 5
-                    ? "translateX(0)"
-                    : `translateX(${RIGHT_REVEAL}px)`,
+                width: isDragging ? pinBtnWidth : 80,
+                flexShrink: 0,
                 transition: isDragging
                   ? "none"
-                  : "transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",
+                  : "width 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",
               }}
-              className={`w-full h-full flex flex-col items-center justify-center gap-1 ${
+              className={`h-full flex flex-col items-center justify-center gap-1 overflow-hidden ${
                 canPin ? "opacity-50" : "opacity-100"
               } ${isPinned ? "bg-orange-500" : "bg-blue-500"}`}
             >
@@ -955,43 +1040,21 @@ function SwipeableChatRow({
           </div>
         )}
 
-        {/* Archive + Delete buttons — attached to RIGHT side of the row (visible when swiping left) */}
-        {/* Fan-out: Archive slides in first (delay 0), Delete fans in after (delay 40ms) */}
+        {/* Left-swipe buttons: Delete + Archive — attached to RIGHT side (visible when swiping left) */}
+        {/* New order: Delete (red, left) | Archive (gray, right/outer) */}
         <div
           style={{
             position: "absolute",
             left: "100%",
             top: 0,
             bottom: 0,
-            width: LEFT_REVEAL,
+            width: leftContainerWidth,
             display: "flex",
-            overflow: "hidden",
+            overflow: "visible",
           }}
           aria-hidden="true"
         >
-          <button
-            type="button"
-            onClick={() => {
-              onSwipeArchive();
-              closeSwipe();
-            }}
-            style={{
-              transform: isDragging
-                ? "none"
-                : translateX <= -(LEFT_REVEAL - 5)
-                  ? "translateX(0)"
-                  : `translateX(${Math.abs(translateX) > 0 ? LEFT_REVEAL * 0.3 : LEFT_REVEAL}px)`,
-              transition: isDragging
-                ? "none"
-                : "transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94) 0.04s",
-            }}
-            className="flex-1 flex flex-col items-center justify-center gap-1 bg-gray-500"
-          >
-            <Archive size={20} className="text-white" />
-            <span className="text-white text-[11px] font-semibold">
-              Archive
-            </span>
-          </button>
+          {/* Delete button (leftmost) — shrinks when archive pushes over */}
           <button
             type="button"
             onClick={() => {
@@ -999,19 +1062,37 @@ function SwipeableChatRow({
               closeSwipe();
             }}
             style={{
-              transform: isDragging
-                ? "none"
-                : translateX <= -(LEFT_REVEAL - 5)
-                  ? "translateX(0)"
-                  : `translateX(${Math.abs(translateX) > 0 ? LEFT_REVEAL * 0.15 : LEFT_REVEAL}px)`,
+              width: isDragging ? deleteBtnWidth : 80,
+              flexShrink: 0,
               transition: isDragging
                 ? "none"
-                : "transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94) 0.02s",
+                : "width 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",
             }}
-            className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-600"
+            className="h-full flex flex-col items-center justify-center gap-1 bg-red-600 overflow-hidden"
           >
             <Trash2 size={20} className="text-white" />
             <span className="text-white text-[11px] font-semibold">Delete</span>
+          </button>
+          {/* Archive button (rightmost/outer) — grows to fill when swiping far */}
+          <button
+            type="button"
+            onClick={() => {
+              onSwipeArchive();
+              closeSwipe();
+            }}
+            style={{
+              width: isDragging ? archiveBtnWidth : 80,
+              flexShrink: 0,
+              transition: isDragging
+                ? "none"
+                : "width 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",
+            }}
+            className="h-full flex flex-col items-center justify-center gap-1 bg-gray-500 overflow-hidden"
+          >
+            <Archive size={20} className="text-white" />
+            <span className="text-white text-[11px] font-semibold">
+              Archive
+            </span>
           </button>
         </div>
 
