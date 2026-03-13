@@ -14,23 +14,30 @@ import {
   ChevronRight,
   Edit2,
   MessageCircle,
+  Pin,
+  PinOff,
   Search,
   Settings,
+  Trash2,
   Users,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Chat, User } from "../backend.d";
 import { ChatType } from "../backend.d";
 import { useAvatarImages } from "../hooks/useAvatarImages";
 import { useMyChats } from "../hooks/useQueries";
 import { useTranslation } from "../i18n/useTranslation";
 import {
+  MAX_PINNED,
   archiveChats,
   deleteChats,
   getArchivedChatIds,
   getDeletedChatIds,
+  getPinnedChatIds,
+  pinChat,
   unarchiveChats,
+  unpinChat,
 } from "../utils/archiveUtils";
 import { formatChatTime } from "../utils/avatarUtils";
 import {
@@ -70,13 +77,21 @@ export default function ChatListScreen({
     new Set(),
   );
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [pendingDeleteChatId, setPendingDeleteChatId] = useState<number | null>(
+    null,
+  );
 
   // Screen state: main list or archived view
   const [screen, setScreen] = useState<Screen>("main");
 
-  // Force re-render after archive/delete operations
+  // Force re-render after archive/delete/pin operations
   const [, setForceUpdate] = useState(0);
   const forceUpdate = useCallback(() => setForceUpdate((n) => n + 1), []);
+
+  // Active swiped row — only one at a time
+  const [activeSwipeChatId, setActiveSwipeChatId] = useState<number | null>(
+    null,
+  );
 
   const principalId = myUser?.principal.toString() ?? "";
 
@@ -111,16 +126,32 @@ export default function ChatListScreen({
   const deletedIds = principalId
     ? new Set(getDeletedChatIds(principalId))
     : new Set<number>();
+  const pinnedIds = principalId
+    ? new Set(getPinnedChatIds(principalId))
+    : new Set<number>();
 
   const mainChats = (chats || []).filter(
     (chat) => !archivedIds.has(chat.id) && !deletedIds.has(chat.id),
   );
 
+  // Sort: pinned first (preserving pin order), then rest by latest message
+  const pinnedOrder = principalId ? getPinnedChatIds(principalId) : [];
+  const sortedMainChats = [...mainChats].sort((a, b) => {
+    const aPinned = pinnedIds.has(a.id);
+    const bPinned = pinnedIds.has(b.id);
+    if (aPinned && bPinned) {
+      return pinnedOrder.indexOf(a.id) - pinnedOrder.indexOf(b.id);
+    }
+    if (aPinned) return -1;
+    if (bPinned) return 1;
+    return 0;
+  });
+
   const archivedChats = (chats || []).filter(
     (chat) => archivedIds.has(chat.id) && !deletedIds.has(chat.id),
   );
 
-  const filteredMainChats = mainChats.filter((chat) => {
+  const filteredMainChats = sortedMainChats.filter((chat) => {
     if (!searchQuery.trim()) return true;
     const name = getChatDisplayName(chat).toLowerCase();
     return name.includes(searchQuery.toLowerCase());
@@ -179,15 +210,44 @@ export default function ChatListScreen({
   }
 
   function handleDeleteConfirm() {
-    if (!principalId || selectedChatIds.size === 0) return;
-    deleteChats(Array.from(selectedChatIds), principalId);
+    if (!principalId) return;
+    const ids = pendingDeleteChatId
+      ? [pendingDeleteChatId]
+      : Array.from(selectedChatIds);
+    if (ids.length === 0) return;
+    deleteChats(ids, principalId);
     setShowDeleteDialog(false);
+    setPendingDeleteChatId(null);
     handleExitEditMode();
     forceUpdate();
     if (screen === "archived") {
-      const remaining = archivedChats.filter((c) => !selectedChatIds.has(c.id));
+      const remaining = archivedChats.filter((c) => !ids.includes(c.id));
       if (remaining.length === 0) setScreen("main");
     }
+  }
+
+  function handleSwipeDelete(chatId: number) {
+    setActiveSwipeChatId(null);
+    setPendingDeleteChatId(chatId);
+    setShowDeleteDialog(true);
+  }
+
+  function handleSwipeArchive(chatId: number) {
+    if (!principalId) return;
+    setActiveSwipeChatId(null);
+    archiveChats([chatId], principalId);
+    forceUpdate();
+  }
+
+  function handleSwipePin(chatId: number) {
+    if (!principalId) return;
+    setActiveSwipeChatId(null);
+    if (pinnedIds.has(chatId)) {
+      unpinChat(chatId, principalId);
+    } else {
+      pinChat(chatId, principalId);
+    }
+    forceUpdate();
   }
 
   function handleChatClick(chat: Chat) {
@@ -205,6 +265,7 @@ export default function ChatListScreen({
   const displayChats =
     screen === "archived" ? filteredArchivedChats : filteredMainChats;
   const hasSelection = selectedChatIds.size > 0;
+  const pinnedCount = pinnedIds.size;
 
   return (
     <div
@@ -295,7 +356,23 @@ export default function ChatListScreen({
       {activeTab === "contacts" ? (
         <ContactsTab myUser={myUser} onOpenChat={onOpenChat} />
       ) : (
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="flex-1 overflow-y-auto overscroll-contain relative">
+          {/* Full-screen overlay to close any open swipe when tapping elsewhere */}
+          {activeSwipeChatId !== null && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 15,
+              }}
+              onClick={() => setActiveSwipeChatId(null)}
+              onKeyDown={(e) =>
+                e.key === "Escape" && setActiveSwipeChatId(null)
+              }
+              role="presentation"
+            />
+          )}
+
           {isLoading ? (
             <div data-ocid="chat_list.loading_state" className="flex flex-col">
               {["s1", "s2", "s3", "s4", "s5"].map((k) => (
@@ -362,8 +439,12 @@ export default function ChatListScreen({
                         delay: Math.min(index * 0.04, 0.2),
                         duration: 0.2,
                       }}
+                      style={{
+                        position: "relative",
+                        zIndex: activeSwipeChatId === chat.id ? 20 : 1,
+                      }}
                     >
-                      <ChatRow
+                      <SwipeableChatRow
                         data-ocid={`chat_list.item.${index + 1}`}
                         chat={chat}
                         myUser={myUser}
@@ -375,6 +456,15 @@ export default function ChatListScreen({
                         selected={selectedChatIds.has(chat.id)}
                         checkboxOcid={`edit_mode.checkbox.${index + 1}`}
                         principalId={principalId}
+                        isPinned={pinnedIds.has(chat.id)}
+                        pinnedCount={pinnedCount}
+                        isArchived={screen === "archived"}
+                        onSwipeDelete={() => handleSwipeDelete(chat.id)}
+                        onSwipeArchive={() => handleSwipeArchive(chat.id)}
+                        onSwipePin={() => handleSwipePin(chat.id)}
+                        isActive={activeSwipeChatId === chat.id}
+                        onActivate={() => setActiveSwipeChatId(chat.id)}
+                        onDeactivate={() => setActiveSwipeChatId(null)}
                       />
                     </motion.div>
                   ))}
@@ -418,23 +508,7 @@ export default function ChatListScreen({
                     hasSelection ? "opacity-100" : "opacity-40"
                   }`}
                 >
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-destructive"
-                    aria-hidden="true"
-                  >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    <path d="M10 11v6M14 11v6" />
-                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                  </svg>
+                  <Trash2 size={22} className="text-destructive" />
                   <span className="text-[11px] font-medium text-destructive">
                     {t("chatlist_delete")}
                   </span>
@@ -497,23 +571,7 @@ export default function ChatListScreen({
                     hasSelection ? "opacity-100" : "opacity-40"
                   }`}
                 >
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-destructive"
-                    aria-hidden="true"
-                  >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    <path d="M10 11v6M14 11v6" />
-                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                  </svg>
+                  <Trash2 size={22} className="text-destructive" />
                   <span className="text-[11px] font-medium text-destructive">
                     {t("chatlist_delete")}
                   </span>
@@ -572,7 +630,6 @@ export default function ChatListScreen({
               onClick={() => {
                 setActiveTab("search");
                 setScreen("main");
-                // Focus immediately (same event loop tick) so iOS opens keyboard
                 searchInputRef.current?.focus();
               }}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
@@ -639,7 +696,13 @@ export default function ChatListScreen({
       />
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) setPendingDeleteChatId(null);
+        }}
+      >
         <AlertDialogContent data-ocid="delete_confirm.dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -652,7 +715,10 @@ export default function ChatListScreen({
           <AlertDialogFooter>
             <AlertDialogCancel
               data-ocid="delete_confirm.cancel_button"
-              onClick={() => setShowDeleteDialog(false)}
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setPendingDeleteChatId(null);
+              }}
             >
               {t("chatlist_cancel")}
             </AlertDialogCancel>
@@ -670,6 +736,309 @@ export default function ChatListScreen({
   );
 }
 
+// ─── Swipeable Chat Row ──────────────────────────────────────────────────────
+
+interface SwipeableChatRowProps {
+  chat: Chat;
+  myUser: User | null | undefined;
+  displayName: string;
+  onClick: () => void;
+  noMessagesLabel: string;
+  avatarMap?: Map<string, string | null>;
+  "data-ocid"?: string;
+  editMode?: boolean;
+  selected?: boolean;
+  checkboxOcid?: string;
+  principalId?: string;
+  isPinned: boolean;
+  pinnedCount: number;
+  isArchived: boolean;
+  onSwipeDelete: () => void;
+  onSwipeArchive: () => void;
+  onSwipePin: () => void;
+  isActive: boolean;
+  onActivate: () => void;
+  onDeactivate: () => void;
+}
+
+function SwipeableChatRow({
+  chat,
+  myUser,
+  displayName,
+  onClick,
+  noMessagesLabel,
+  avatarMap,
+  "data-ocid": dataOcid,
+  editMode = false,
+  selected = false,
+  checkboxOcid,
+  principalId = "",
+  isPinned,
+  pinnedCount,
+  isArchived,
+  onSwipeDelete,
+  onSwipeArchive,
+  onSwipePin,
+  isActive,
+  onActivate,
+  onDeactivate,
+}: SwipeableChatRowProps) {
+  const [translateX, setTranslateX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const startTranslateXRef = useRef(0); // translateX at the moment the touch begins
+  const directionLockedRef = useRef<"horizontal" | "vertical" | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const ACTION_THRESHOLD = 50;
+  const translateXRef = useRef(0);
+  const LEFT_REVEAL = 160; // width of delete + archive buttons
+  const RIGHT_REVEAL = 80; // width of pin button
+
+  const canPin = !isPinned && pinnedCount >= MAX_PINNED;
+
+  // Keep ref in sync with translateX
+  translateXRef.current = translateX;
+
+  // Auto-close when another row becomes active
+  useEffect(() => {
+    if (!isActive && translateXRef.current !== 0) {
+      setTranslateX(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
+
+  function onTouchStart(e: React.TouchEvent) {
+    if (editMode) return;
+    startXRef.current = e.touches[0].clientX;
+    startYRef.current = e.touches[0].clientY;
+    // CRITICAL: capture current position so re-swipe continues from where it left off
+    startTranslateXRef.current = translateXRef.current;
+    directionLockedRef.current = null;
+    setIsDragging(true);
+    onActivate();
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (!isDragging || editMode) return;
+    const dx = e.touches[0].clientX - startXRef.current;
+    const dy = e.touches[0].clientY - startYRef.current;
+
+    if (!directionLockedRef.current) {
+      if (Math.abs(dx) > Math.abs(dy) + 5) {
+        directionLockedRef.current = "horizontal";
+      } else if (Math.abs(dy) > Math.abs(dx) + 5) {
+        directionLockedRef.current = "vertical";
+        setIsDragging(false);
+        return;
+      } else {
+        return;
+      }
+    }
+
+    if (directionLockedRef.current !== "horizontal") return;
+
+    // Prevent scroll when swiping horizontally
+    e.preventDefault();
+
+    // Add delta to the position the row was at when the touch started
+    const rawX = startTranslateXRef.current + dx;
+    const minX = -LEFT_REVEAL - 20;
+    const maxX = isArchived ? 0 : RIGHT_REVEAL + 20;
+    const clamped = Math.max(minX, Math.min(maxX, rawX));
+    setTranslateX(clamped);
+  }
+
+  function onTouchEnd() {
+    if (!isDragging) return;
+    setIsDragging(false);
+    directionLockedRef.current = null;
+
+    const current = translateXRef.current;
+
+    if (current < -ACTION_THRESHOLD) {
+      // Snap to reveal left actions
+      setTranslateX(-LEFT_REVEAL);
+    } else if (current > ACTION_THRESHOLD && !isArchived) {
+      // Snap to reveal right pin action
+      setTranslateX(RIGHT_REVEAL);
+    } else {
+      // Snap back
+      setTranslateX(0);
+      onDeactivate();
+    }
+  }
+
+  function closeSwipe() {
+    setTranslateX(0);
+    onDeactivate();
+  }
+
+  function handleChatRowClick() {
+    if (translateX !== 0) {
+      // Row is swiped open — close it instead of opening the chat
+      closeSwipe();
+    } else {
+      onClick();
+    }
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative overflow-hidden"
+      style={{
+        touchAction:
+          isDragging && directionLockedRef.current === "horizontal"
+            ? "none"
+            : "pan-y",
+      }}
+    >
+      {/* Single translating strip: chat row + buttons attached to its sides */}
+      <div
+        style={{
+          transform: `translateX(${translateX}px)`,
+          transition: isDragging
+            ? "none"
+            : "transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)",
+          display: "flex",
+          position: "relative",
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Pin button — attached to LEFT side of the row (visible when swiping right) */}
+        {!isArchived && (
+          <div
+            style={{
+              position: "absolute",
+              right: "100%",
+              top: 0,
+              bottom: 0,
+              width: RIGHT_REVEAL,
+              display: "flex",
+            }}
+            aria-hidden="true"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                onSwipePin();
+                closeSwipe();
+              }}
+              disabled={canPin}
+              style={{
+                transform: isDragging
+                  ? "none"
+                  : translateX >= RIGHT_REVEAL - 5
+                    ? "translateX(0)"
+                    : `translateX(${RIGHT_REVEAL}px)`,
+                transition: isDragging
+                  ? "none"
+                  : "transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",
+              }}
+              className={`w-full h-full flex flex-col items-center justify-center gap-1 ${
+                canPin ? "opacity-50" : "opacity-100"
+              } ${isPinned ? "bg-orange-500" : "bg-blue-500"}`}
+            >
+              {isPinned ? (
+                <PinOff size={20} className="text-white" />
+              ) : (
+                <Pin size={20} className="text-white" />
+              )}
+              <span className="text-white text-[11px] font-semibold">
+                {isPinned ? "Unpin" : "Pin"}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Archive + Delete buttons — attached to RIGHT side of the row (visible when swiping left) */}
+        {/* Fan-out: Archive slides in first (delay 0), Delete fans in after (delay 40ms) */}
+        <div
+          style={{
+            position: "absolute",
+            left: "100%",
+            top: 0,
+            bottom: 0,
+            width: LEFT_REVEAL,
+            display: "flex",
+            overflow: "hidden",
+          }}
+          aria-hidden="true"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              onSwipeArchive();
+              closeSwipe();
+            }}
+            style={{
+              transform: isDragging
+                ? "none"
+                : translateX <= -(LEFT_REVEAL - 5)
+                  ? "translateX(0)"
+                  : `translateX(${Math.abs(translateX) > 0 ? LEFT_REVEAL * 0.3 : LEFT_REVEAL}px)`,
+              transition: isDragging
+                ? "none"
+                : "transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94) 0.04s",
+            }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 bg-gray-500"
+          >
+            <Archive size={20} className="text-white" />
+            <span className="text-white text-[11px] font-semibold">
+              Archive
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onSwipeDelete();
+              closeSwipe();
+            }}
+            style={{
+              transform: isDragging
+                ? "none"
+                : translateX <= -(LEFT_REVEAL - 5)
+                  ? "translateX(0)"
+                  : `translateX(${Math.abs(translateX) > 0 ? LEFT_REVEAL * 0.15 : LEFT_REVEAL}px)`,
+              transition: isDragging
+                ? "none"
+                : "transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94) 0.02s",
+            }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-600"
+          >
+            <Trash2 size={20} className="text-white" />
+            <span className="text-white text-[11px] font-semibold">Delete</span>
+          </button>
+        </div>
+
+        {/* The actual chat row — fully opaque, never transparent */}
+        <div className="w-full bg-background">
+          <ChatRow
+            chat={chat}
+            myUser={myUser}
+            displayName={displayName}
+            onClick={handleChatRowClick}
+            noMessagesLabel={noMessagesLabel}
+            avatarMap={avatarMap}
+            data-ocid={dataOcid}
+            editMode={editMode}
+            selected={selected}
+            checkboxOcid={checkboxOcid}
+            principalId={principalId}
+            isPinned={isPinned}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Chat Row ────────────────────────────────────────────────────────────────
+
 interface ChatRowProps {
   chat: Chat;
   myUser: User | null | undefined;
@@ -682,6 +1051,7 @@ interface ChatRowProps {
   selected?: boolean;
   checkboxOcid?: string;
   principalId?: string;
+  isPinned?: boolean;
 }
 
 function ChatRow({
@@ -696,6 +1066,7 @@ function ChatRow({
   selected = false,
   checkboxOcid,
   principalId = "",
+  isPinned = false,
 }: ChatRowProps) {
   const lastMsg = chat.lastMessage;
   const lastMsgTime = lastMsg?.timestamp
@@ -725,7 +1096,7 @@ function ChatRow({
       type="button"
       data-ocid={dataOcid}
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left relative"
+      className="w-full flex items-center gap-3 px-4 py-3 active:bg-muted/60 transition-colors text-left relative bg-background"
     >
       {/* Checkbox in edit mode */}
       {editMode && (
@@ -786,9 +1157,14 @@ function ChatRow({
       {/* Content + inset divider */}
       <div className="flex-1 min-w-0 chat-row-divider pb-3 -mb-3">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="font-semibold text-sm text-foreground truncate">
-            {displayName}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            {isPinned && (
+              <Pin size={11} className="text-muted-foreground flex-shrink-0" />
+            )}
+            <span className="font-semibold text-sm text-foreground truncate">
+              {displayName}
+            </span>
+          </div>
           {lastMsgTime && (
             <span
               className={`text-xs flex-shrink-0 ${

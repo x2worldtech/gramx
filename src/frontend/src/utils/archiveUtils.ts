@@ -1,8 +1,5 @@
 /**
- * Archive and Delete utilities using localStorage.
- *
- * localStorage key: "gramx_archived_{principalId}" => JSON array of chatIds
- * localStorage key: "gramx_deleted_{principalId}"  => JSON array of chatIds
+ * Archive, Delete, and Pin utilities using localStorage.
  */
 
 function getArchivedKey(principalId: string): string {
@@ -11,6 +8,10 @@ function getArchivedKey(principalId: string): string {
 
 function getDeletedKey(principalId: string): string {
   return `gramx_deleted_${principalId}`;
+}
+
+function getPinnedKey(principalId: string): string {
+  return `gramx_pinned_${principalId}`;
 }
 
 function readIds(key: string): number[] {
@@ -55,12 +56,38 @@ export function getDeletedChatIds(principalId: string): number[] {
 
 export function deleteChats(chatIds: number[], principalId: string): void {
   const current = new Set(getDeletedChatIds(principalId));
-  // Also remove from archived
   const archived = new Set(getArchivedChatIds(principalId));
+  const pinned = new Set(getPinnedChatIds(principalId));
   for (const id of chatIds) {
     current.add(id);
     archived.delete(id);
+    pinned.delete(id);
   }
   writeIds(getDeletedKey(principalId), Array.from(current));
   writeIds(getArchivedKey(principalId), Array.from(archived));
+  writeIds(getPinnedKey(principalId), Array.from(pinned));
+}
+
+// ─── Pin ─────────────────────────────────────────────────────────────────────
+
+export const MAX_PINNED = 5;
+
+export function getPinnedChatIds(principalId: string): number[] {
+  return readIds(getPinnedKey(principalId));
+}
+
+export function pinChat(chatId: number, principalId: string): boolean {
+  const current = getPinnedChatIds(principalId);
+  if (current.includes(chatId)) return true; // already pinned
+  if (current.length >= MAX_PINNED) return false; // limit reached
+  writeIds(getPinnedKey(principalId), [...current, chatId]);
+  return true;
+}
+
+export function unpinChat(chatId: number, principalId: string): void {
+  const current = getPinnedChatIds(principalId);
+  writeIds(
+    getPinnedKey(principalId),
+    current.filter((id) => id !== chatId),
+  );
 }
