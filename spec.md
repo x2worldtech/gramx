@@ -1,22 +1,22 @@
 # GramX
 
 ## Current State
-App is a full Telegram-style chat app. `useMyUser` hook calls `getCallerUserProfile()` which returns `UserProfile | null` (without `principal`). Chats are not loading and new chats don't persist in the list.
+Das Backend `deleteAccount()` entfernt nur den User aus der `users`-Map und sein Profilbild aus `avatarImages`. Chats bleiben erhalten. Das Frontend löscht beim Account-Löschen keine localStorage-Daten (Kontakte, Gruppeninfos, Settings).
 
 ## Requested Changes (Diff)
 
 ### Add
-- Nothing new
+- Backend: `deleteAccount` entfernt alle Direct-Chats, an denen der Nutzer beteiligt ist, vollständig
+- Backend: `deleteAccount` entfernt den Nutzer aus allen Gruppen-Chats (Participant entfernen)
+- Frontend: Nach `deleteAccount` wird `localStorage.clear()` aufgerufen, damit alle Kontakte, Gruppeninfos und Settings gelöscht werden
 
 ### Modify
-- `useMyUser`: Switch from `getCallerUserProfile()` to `getMyUser()` which returns the full `User` object (with `principal`). Handle `Unauthorized`/`not registered` errors as null (user not registered). Propagate other errors so React Query retries.
-- `useCreateDirectChat` / `useCreateGroupChat`: Optimistically add new chat to the `myChats` cache immediately on success, so the chat list updates instantly without waiting for the next poll.
-- `useMyChats`: Scope the query key to include `principalId` to avoid stale data across users.
+- `src/backend/main.mo`: `deleteAccount`-Funktion erweitern
+- `src/frontend/src/components/SettingsScreen.tsx`: `handleDeleteAccount` um localStorage-Clearing erweitern
 
 ### Remove
-- Nothing
+- Nichts
 
 ## Implementation Plan
-1. Fix `useMyUser` to call `getMyUser()` and handle errors correctly
-2. Fix `useCreateDirectChat` and `useCreateGroupChat` to update cache immediately on success
-3. Validate and deploy
+1. Backend `deleteAccount` iteriert über alle Chats: Direct Chats mit Caller werden gelöscht, Gruppen-Chats entfernen den Caller aus der Participants-Liste
+2. Frontend `handleDeleteAccount` ruft nach dem Backend-Call `localStorage.clear()` auf

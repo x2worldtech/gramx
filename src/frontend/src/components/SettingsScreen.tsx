@@ -298,7 +298,9 @@ export default function SettingsScreen({
     setDeletingAccount(true);
     try {
       await actor.deleteAccount();
-      // Clear all cached data so the app knows the user is gone
+      // Clear all localStorage data (contacts, group info, settings, etc.)
+      localStorage.clear();
+      // Clear all cached query data
       const principalId = identity?.getPrincipal().toString() ?? "anonymous";
       queryClient.setQueryData(["myUser", principalId], null);
       queryClient.removeQueries({ queryKey: ["myChats"] });

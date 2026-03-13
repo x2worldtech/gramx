@@ -404,12 +404,41 @@ actor {
     if (not users.containsKey(caller)) {
       Runtime.trap("Unauthorized: Only registered users can delete accounts");
     };
-    let _existingUser = switch (users.get(caller)) {
-      case (null) { Runtime.trap("User does not exist") };
-      case (?user) { user };
-    };
+    // Remove user data
     users.remove(caller);
     avatarImages.remove(caller);
+
+    // Remove all direct chats the caller participated in,
+    // and remove caller from group chat participant lists
+    let chatsToDelete = List.empty<ChatId>();
+    let chatsToUpdate = List.empty<(ChatId, Chat)>();
+
+    for ((chatId, chat) in chats.entries()) {
+      let isParticipant = chat.participants.find(
+        func(p) { p.principal == caller }
+      );
+      if (isParticipant != null) {
+        switch (chat.chatType) {
+          case (#direct) {
+            chatsToDelete.add(chatId);
+          };
+          case (#group) {
+            let remaining = chat.participants.filter(
+              func(p) { p.principal != caller }
+            );
+            let updatedChat = { chat with participants = remaining };
+            chatsToUpdate.add((chatId, updatedChat));
+          };
+        };
+      };
+    };
+
+    for (chatId in chatsToDelete.values()) {
+      chats.remove(chatId);
+    };
+    for ((chatId, updatedChat) in chatsToUpdate.values()) {
+      chats.add(chatId, updatedChat);
+    };
   };
 
   // AVATAR IMAGE FUNCTIONS
