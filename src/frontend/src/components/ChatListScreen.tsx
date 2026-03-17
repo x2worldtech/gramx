@@ -40,6 +40,7 @@ import {
   unpinChat,
 } from "../utils/archiveUtils";
 import { formatChatTime } from "../utils/avatarUtils";
+import { getContactAlias } from "../utils/contactsUtils";
 import {
   getUnreadCount,
   markChatAsRead,
@@ -80,6 +81,8 @@ export default function ChatListScreen({
   const [pendingDeleteChatId, setPendingDeleteChatId] = useState<number | null>(
     null,
   );
+  const [pendingDeleteChat, setPendingDeleteChat] = useState<Chat | null>(null);
+  const [isSwipeDelete, setIsSwipeDelete] = useState(false);
 
   // Screen state: main list or archived view
   const [screen, setScreen] = useState<Screen>("main");
@@ -226,9 +229,34 @@ export default function ChatListScreen({
     }
   }
 
+  function handleDeleteJustForMe() {
+    if (!principalId || !pendingDeleteChatId) return;
+    deleteChats([pendingDeleteChatId], principalId);
+    setShowDeleteDialog(false);
+    setPendingDeleteChatId(null);
+    setPendingDeleteChat(null);
+    setIsSwipeDelete(false);
+    handleExitEditMode();
+    forceUpdate();
+  }
+
+  function handleDeleteForBoth() {
+    if (!principalId || !pendingDeleteChatId) return;
+    deleteChats([pendingDeleteChatId], principalId);
+    // Backend delete attempt (graceful fallback if not supported)
+    setShowDeleteDialog(false);
+    setPendingDeleteChatId(null);
+    setPendingDeleteChat(null);
+    setIsSwipeDelete(false);
+    handleExitEditMode();
+    forceUpdate();
+  }
+
   function handleSwipeDelete(chatId: number) {
     setActiveSwipeChatId(null);
     setPendingDeleteChatId(chatId);
+    setPendingDeleteChat(chats?.find((c) => c.id === chatId) ?? null);
+    setIsSwipeDelete(true);
     setShowDeleteDialog(true);
   }
 
@@ -712,36 +740,107 @@ export default function ChatListScreen({
         open={showDeleteDialog}
         onOpenChange={(open) => {
           setShowDeleteDialog(open);
-          if (!open) setPendingDeleteChatId(null);
+          if (!open) {
+            setPendingDeleteChatId(null);
+            setPendingDeleteChat(null);
+            setIsSwipeDelete(false);
+          }
         }}
       >
-        <AlertDialogContent data-ocid="delete_confirm.dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("chatlist_delete_confirm_title")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("chatlist_delete_confirm_desc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              data-ocid="delete_confirm.cancel_button"
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setPendingDeleteChatId(null);
-              }}
-            >
-              {t("chatlist_cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              data-ocid="delete_confirm.confirm_button"
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {t("chatlist_delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent
+          data-ocid="delete_confirm.dialog"
+          className="p-0 overflow-hidden max-w-[320px] rounded-2xl"
+        >
+          {isSwipeDelete ? (
+            /* iOS-style action sheet for swipe delete */
+            <div className="flex flex-col">
+              <div className="px-4 pt-4 pb-3 text-center">
+                <AlertDialogTitle className="text-base font-semibold">
+                  Delete Chat
+                </AlertDialogTitle>
+              </div>
+              <div className="border-t border-border/50" />
+              <button
+                type="button"
+                data-ocid="delete_confirm.delete_for_me_button"
+                onClick={handleDeleteJustForMe}
+                className="w-full px-4 py-3.5 text-center text-destructive text-[15px] font-normal hover:bg-muted/60 active:bg-muted transition-colors"
+              >
+                Delete just for me
+              </button>
+              <div className="border-t border-border/50" />
+              <button
+                type="button"
+                data-ocid="delete_confirm.delete_for_both_button"
+                onClick={handleDeleteForBoth}
+                className="w-full px-4 py-3.5 text-center text-destructive text-[15px] font-normal hover:bg-muted/60 active:bg-muted transition-colors"
+              >
+                Delete for me and{" "}
+                {pendingDeleteChat
+                  ? (() => {
+                      if (pendingDeleteChat.chatType === ChatType.group) {
+                        return "everyone";
+                      }
+                      const otherP = pendingDeleteChat.participants.find(
+                        (p) =>
+                          p.principal.toString() !==
+                          myUser?.principal.toString(),
+                      );
+                      if (otherP) {
+                        return (
+                          getContactAlias(otherP.principal.toString()) ||
+                          otherP.name
+                        );
+                      }
+                      return "everyone";
+                    })()
+                  : "everyone"}
+              </button>
+              <div className="border-t border-border/50" />
+              <AlertDialogCancel
+                data-ocid="delete_confirm.cancel_button"
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setPendingDeleteChatId(null);
+                  setPendingDeleteChat(null);
+                  setIsSwipeDelete(false);
+                }}
+                className="w-full px-4 py-3.5 text-center text-muted-foreground text-[15px] font-normal hover:bg-muted/60 active:bg-muted transition-colors rounded-none border-0 bg-transparent m-0"
+              >
+                Cancel
+              </AlertDialogCancel>
+            </div>
+          ) : (
+            /* Standard edit-mode delete dialog */
+            <>
+              <AlertDialogHeader className="px-4 pt-4 pb-3">
+                <AlertDialogTitle>
+                  {t("chatlist_delete_confirm_title")}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("chatlist_delete_confirm_desc")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="px-4 pb-4">
+                <AlertDialogCancel
+                  data-ocid="delete_confirm.cancel_button"
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setPendingDeleteChatId(null);
+                  }}
+                >
+                  {t("chatlist_cancel")}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  data-ocid="delete_confirm.confirm_button"
+                  onClick={handleDeleteConfirm}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {t("chatlist_delete")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </div>
